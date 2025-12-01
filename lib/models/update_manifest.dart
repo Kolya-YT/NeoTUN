@@ -4,11 +4,17 @@ class UpdateManifest {
   final String latestVersion;
   final String notes;
   final Map<String, PlatformUpdate> platforms;
+  final String? latestBetaVersion;
+  final String? betaNotes;
+  final Map<String, PlatformUpdate>? betaPlatforms;
 
   UpdateManifest({
     required this.latestVersion,
     required this.notes,
     required this.platforms,
+    this.latestBetaVersion,
+    this.betaNotes,
+    this.betaPlatforms,
   });
 
   factory UpdateManifest.fromJson(Map<String, dynamic> json) {
@@ -19,10 +25,21 @@ class UpdateManifest {
       });
     }
 
+    Map<String, PlatformUpdate>? betaPlatformsMap;
+    if (json['beta_platforms'] != null) {
+      betaPlatformsMap = {};
+      (json['beta_platforms'] as Map<String, dynamic>).forEach((key, value) {
+        betaPlatformsMap![key] = PlatformUpdate.fromJson(value);
+      });
+    }
+
     return UpdateManifest(
       latestVersion: json['latest_version'] ?? json['latestVersion'] ?? '1.0.0',
       notes: json['notes'] ?? '',
       platforms: platformsMap,
+      latestBetaVersion: json['latest_beta_version'],
+      betaNotes: json['beta_notes'],
+      betaPlatforms: betaPlatformsMap,
     );
   }
 

@@ -165,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
             title: const Text('About'),
-            subtitle: Text('NeoTUN v$_appVersion\nCross-platform VPN client\nSupports Xray, sing-box, Hysteria2'),
+            subtitle: Text('NeoTUN v$_appVersion${_appVersion.contains('beta') ? ' (Beta)' : ''}\nCross-platform VPN client\nSupports Xray, sing-box, Hysteria2'),
             trailing: const Icon(Icons.info),
           ),
         ),
