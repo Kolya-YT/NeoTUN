@@ -99,6 +99,8 @@ class UpdateService {
     if (Platform.isWindows) {
       return 'windows-x64';
     } else if (Platform.isAndroid) {
+      // Определяем архитектуру Android
+      // По умолчанию используем arm64 как самую распространенную
       return 'android-arm64';
     } else if (Platform.isLinux) {
       return 'linux-x64';

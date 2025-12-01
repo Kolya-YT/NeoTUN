@@ -1,14 +1,22 @@
 {
-  "latest_version": "1.1.2",
-  "notes": "Release 1.1.2",
+  "latest_version": "1.1.3",
+  "notes": "Fixed Android permissions and app updates",
   "platforms": {
     "windows-x64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.2/NeoTUN-Windows-x64.zip",
-      "sha256": "69d1a15a97c48f68610514c3df6ba60f586473b704ed47e2b66a21cf6e4153df"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/NeoTUN-Windows-x64.zip",
+      "sha256": ""
     },
     "android-arm64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.2/app-arm64-v8a-release.apk",
-      "sha256": "69550e900fecc852e3b38ae58553d582abf6d742f9f13ea29d77a9140938959c"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/app-arm64-v8a-release.apk",
+      "sha256": ""
+    },
+    "android-arm32": {
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/app-armeabi-v7a-release.apk",
+      "sha256": ""
+    },
+    "android-x64": {
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/app-x86_64-release.apk",
+      "sha256": ""
     }
   }
 }
