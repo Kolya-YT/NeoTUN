@@ -44,7 +44,7 @@
 - ✅ Автоматическое создание виртуального сетевого интерфейса
 - ✅ Полный перехват TCP/UDP трафика
 - ✅ Поддержка Wintun driver на Windows
-- ✅ VpnService для Android с foreground notification
+- ✅ ProxyService для Android с foreground notification
 - ✅ Переключатель Proxy/TUN режима в UI
 
 #### Улучшенный системный прокси
@@ -71,7 +71,7 @@
 
 #### Android
 - ✅ Новый TunVpnService для TUN режима
-- ✅ Поддержка VPN разрешений
+- ✅ Поддержка TUN разрешений
 - ✅ Foreground Service с уведомлениями
 - ✅ MethodChannel для управления из Flutter
 - ✅ Обработка пакетов в отдельном потоке
@@ -107,7 +107,7 @@ lib/widgets/
 └── connection_mode_selector.dart  # Виджет выбора режима
 
 android/app/src/main/kotlin/com/neotun/app/
-├── TunVpnService.kt          # VPN сервис для TUN
+├── TunVpnService.kt          # TUN сервис для туннелирования
 └── MainActivity.kt           # Обновлен для TUN поддержки
 ```
 
@@ -177,7 +177,7 @@ android/app/src/main/kotlin/com/neotun/app/
 
 ### Android
 - ⚠️ Требуется Android 5.0+ (API 21+)
-- ⚠️ Некоторые устройства могут блокировать VPN
+- ⚠️ Некоторые устройства могут блокировать TUN режим
 - ⚠️ Battery optimization может останавливать сервис
 
 ### Общие
