@@ -1,18 +1,14 @@
 {
-  "latest_version": "1.0.0",
-  "notes": "Initial release\n- Support for Xray, sing-box, and Hysteria2\n- Auto-update functionality\n- Config import/export\n- Cross-platform support",
+  "latest_version": "1.1.0",
+  "notes": "Release 1.1.0",
   "platforms": {
     "windows-x64": {
-      "url": "https://github.com/yourusername/neotun/releases/download/v1.0.0/NeoTUN-1.0.0-windows-x64.exe",
-      "sha256": "example_sha256_hash_for_windows_installer"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.0/NeoTUN-Windows-x64.zip",
+      "sha256": "e672c6df8d377b78fa899f51f99982ab1c1fcadf1c56347fa330922de013ee1e"
     },
     "android-arm64": {
-      "url": "https://github.com/yourusername/neotun/releases/download/v1.0.0/NeoTUN-1.0.0-arm64-v8a.apk",
-      "sha256": "example_sha256_hash_for_android_apk"
-    },
-    "linux-x64": {
-      "url": "https://github.com/yourusername/neotun/releases/download/v1.0.0/NeoTUN-1.0.0-linux-x64.tar.gz",
-      "sha256": "example_sha256_hash_for_linux_tarball"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.0/app-arm64-v8a-release.apk",
+      "sha256": "bbe414b5419c29bfa81f72f2a56360bf68117ccf762afd261731b1ece9427a1e"
     }
   }
 }
