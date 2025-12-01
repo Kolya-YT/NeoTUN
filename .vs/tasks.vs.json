@@ -1,0 +1,10 @@
+{
+  "version": "0.2.1",
+  "tasks": [
+    {
+      "taskLabel": "задача-CMakeLists",
+      "appliesTo": "windows/CMakeLists.txt",
+      "type": "launch"
+    }
+  ]
+}
