@@ -388,6 +388,10 @@ class CoreManager {
         }
         
         _activeConfig = config;
+        
+        // Start traffic statistics
+        TrafficStats.instance.startSession();
+        
         _logController.add('[TUN] Core started successfully in TUN mode');
         return;
       }
@@ -545,7 +549,7 @@ class CoreManager {
 
 
 
-  bool get isRunning => _runningProcess != null;
+  bool get isRunning => _runningProcess != null || TunManager.instance.isTunEnabled || _activeConfig != null;
   VpnConfig? get activeConfig => _activeConfig;
   Directory get coreDirectory => _coreDir;
 
