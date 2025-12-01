@@ -10,10 +10,16 @@ import '../services/core_manager.dart';
 import '../services/subscription_parser.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final Function(bool)? onThemeChanged;
+  final Function(ThemeMode)? onThemeChanged;
+  final Function(Locale)? onLocaleChanged;
   final VoidCallback? onConfigsChanged;
   
-  const SettingsScreen({super.key, this.onThemeChanged, this.onConfigsChanged});
+  const SettingsScreen({
+    super.key, 
+    this.onThemeChanged, 
+    this.onLocaleChanged,
+    this.onConfigsChanged,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -21,7 +27,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoUpdate = true;
-  bool _darkMode = false;
+  String _themeMode = 'system';
+  String _language = 'en';
   String _appVersion = '1.0.0';
 
   @override
@@ -34,12 +41,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final autoUpdate = await UpdateService.instance.autoUpdateEnabled;
     final packageInfo = await PackageInfo.fromPlatform();
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('dark_mode') ?? false;
+    final themeMode = prefs.getString('theme_mode') ?? 'system';
+    final language = prefs.getString('language') ?? 'en';
     
     setState(() {
       _autoUpdate = autoUpdate;
       _appVersion = packageInfo.version;
-      _darkMode = isDark;
+      _themeMode = themeMode;
+      _language = language;
     });
   }
 
@@ -79,16 +88,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailing: const Icon(Icons.update),
                 onTap: _checkUpdates,
               ),
-              SwitchListTile(
-                title: const Text('Dark Mode'),
-                subtitle: const Text('Use dark theme'),
-                value: _darkMode,
-                onChanged: (value) async {
-                  setState(() => _darkMode = value);
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('dark_mode', value);
-                  widget.onThemeChanged?.call(value);
-                },
+              ListTile(
+                title: const Text('Theme'),
+                subtitle: Text(_themeMode == 'dark' ? 'Dark' : _themeMode == 'light' ? 'Light' : 'System'),
+                trailing: const Icon(Icons.brightness_6),
+                onTap: () => _showThemeDialog(),
+              ),
+              ListTile(
+                title: const Text('Language'),
+                subtitle: Text(_language == 'ru' ? 'Русский' : 'English'),
+                trailing: const Icon(Icons.language),
+                onTap: () => _showLanguageDialog(),
               ),
             ],
           ),
@@ -546,6 +556,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SnackBar(content: Text('Cache cleared')),
         );
       }
+    }
+  }
+
+  Future<void> _showThemeDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Theme'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('System'),
+              value: 'system',
+              groupValue: _themeMode,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile<String>(
+              title: const Text('Light'),
+              value: 'light',
+              groupValue: _themeMode,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile<String>(
+              title: const Text('Dark'),
+              value: 'dark',
+              groupValue: _themeMode,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _themeMode = result);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('theme_mode', result);
+      
+      final mode = result == 'dark' 
+          ? ThemeMode.dark 
+          : result == 'light' 
+              ? ThemeMode.light 
+              : ThemeMode.system;
+      widget.onThemeChanged?.call(mode);
+    }
+  }
+
+  Future<void> _showLanguageDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('English'),
+              value: 'en',
+              groupValue: _language,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile<String>(
+              title: const Text('Русский'),
+              value: 'ru',
+              groupValue: _language,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _language = result);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language', result);
+      widget.onLocaleChanged?.call(Locale(result));
     }
   }
 }

@@ -12,9 +12,10 @@ import 'settings_screen.dart';
 import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Function(bool)? onThemeChanged;
+  final Function(ThemeMode)? onThemeChanged;
+  final Function(Locale)? onLocaleChanged;
   
-  const HomeScreen({super.key, this.onThemeChanged});
+  const HomeScreen({super.key, this.onThemeChanged, this.onLocaleChanged});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -138,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const CoresScreen(),
           SettingsScreen(
             onThemeChanged: widget.onThemeChanged,
+            onLocaleChanged: widget.onLocaleChanged,
             onConfigsChanged: _refreshConfigs,
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/qr_scanner_screen.dart';
@@ -6,6 +7,7 @@ import 'services/core_manager.dart';
 import 'services/config_storage.dart';
 import 'services/update_service.dart';
 import 'services/traffic_stats.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,24 +47,38 @@ class NeoTunApp extends StatefulWidget {
 
 class _NeoTunAppState extends State<NeoTunApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  Locale _locale = const Locale('en');
 
   @override
   void initState() {
     super.initState();
-    _loadThemeMode();
+    _loadSettings();
   }
 
-  Future<void> _loadThemeMode() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('dark_mode') ?? false;
+    final themeMode = prefs.getString('theme_mode') ?? 'system';
+    final languageCode = prefs.getString('language') ?? 'en';
+    
     setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = themeMode == 'dark' 
+          ? ThemeMode.dark 
+          : themeMode == 'light' 
+              ? ThemeMode.light 
+              : ThemeMode.system;
+      _locale = Locale(languageCode);
     });
   }
 
-  void updateThemeMode(bool isDark) {
+  void updateThemeMode(ThemeMode mode) {
     setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = mode;
+    });
+  }
+
+  void updateLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
     });
   }
 
@@ -71,24 +87,34 @@ class _NeoTunAppState extends State<NeoTunApp> {
     return MaterialApp(
       title: 'NeoTUN',
       themeMode: _themeMode,
+      locale: _locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ru'),
+      ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1), // Indigo
+          seedColor: const Color(0xFF6366F1),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        scaffoldBackgroundColor: Colors.grey[50],
+        cardTheme: CardTheme(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Colors.white,
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -97,7 +123,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.grey[100],
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         ),
         appBarTheme: const AppBarTheme(
@@ -108,40 +134,43 @@ class _NeoTunAppState extends State<NeoTunApp> {
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1), // Indigo
+          seedColor: const Color(0xFF6366F1),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
+        cardTheme: CardTheme(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: const Color(0xFF1E293B),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
-        inputDecorationTheme: InputDecorationTheme(
+        inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.all(Radius.circular(16)),
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: const Color(0xFF1E293B),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          fillColor: Color(0xFF1E293B),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: false,
           elevation: 0,
           scrolledUnderElevation: 0,
+          backgroundColor: Color(0xFF0F172A),
         ),
       ),
-      home: HomeScreen(onThemeChanged: updateThemeMode),
+      home: HomeScreen(
+        onThemeChanged: updateThemeMode,
+        onLocaleChanged: updateLocale,
+      ),
       routes: {
         '/qr_scanner': (context) => const QRScannerScreen(),
       },
