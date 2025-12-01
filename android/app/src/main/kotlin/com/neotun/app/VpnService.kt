@@ -64,34 +64,38 @@ class VpnService : Service() {
             
             android.util.Log.d("VpnService", "Core path: $corePath")
             
-            // Try to copy to /data/local/tmp which usually has exec permissions
-            val tmpCore = File("/data/local/tmp/${coreFile.name}")
-            var execPath = corePath
-            
-            try {
-                coreFile.copyTo(tmpCore, overwrite = true)
-                Runtime.getRuntime().exec(arrayOf("chmod", "755", tmpCore.absolutePath)).waitFor()
-                execPath = tmpCore.absolutePath
-                android.util.Log.d("VpnService", "Using tmp path: $execPath")
-            } catch (e: Exception) {
-                android.util.Log.w("VpnService", "Failed to copy to tmp, using original", e)
-                Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
+            // Build command string
+            val commandStr = buildString {
+                append(corePath)
+                args.forEach { arg ->
+                    append(" ")
+                    if (arg.contains(" ")) {
+                        append("\"$arg\"")
+                    } else {
+                        append(arg)
+                    }
+                }
+                append(" \"$configPath\"")
             }
-
-            // Build command
-            val command = mutableListOf<String>()
-            command.add(execPath)
-            command.addAll(args)
-            command.add(configPath)
             
-            android.util.Log.d("VpnService", "Starting: ${command.joinToString(" ")}")
-
-            // Start process
-            coreProcess = Runtime.getRuntime().exec(
-                command.toTypedArray(),
-                arrayOf("PATH=/system/bin:/system/xbin"),
-                File(execPath).parentFile
-            )
+            android.util.Log.d("VpnService", "Command: $commandStr")
+            
+            // Try with su if available, otherwise regular exec
+            var process: Process? = null
+            try {
+                // Try root first
+                Runtime.getRuntime().exec(arrayOf("chmod", "777", corePath)).waitFor()
+                process = Runtime.getRuntime().exec(arrayOf("su", "-c", commandStr))
+                android.util.Log.d("VpnService", "Started with su (root)")
+            } catch (e: Exception) {
+                android.util.Log.w("VpnService", "Root not available, trying regular exec", e)
+                // Fallback to regular exec
+                Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
+                process = Runtime.getRuntime().exec(arrayOf("sh", "-c", commandStr))
+                android.util.Log.d("VpnService", "Started with sh")
+            }
+            
+            coreProcess = process
             isRunning = true
 
             // Start foreground service
