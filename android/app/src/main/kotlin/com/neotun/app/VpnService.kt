@@ -62,36 +62,33 @@ class VpnService : Service() {
                 throw Exception("Core file not found: $corePath")
             }
             
-            // Copy core to cache dir with executable permissions
-            val cacheDir = applicationContext.cacheDir
-            val executableCore = File(cacheDir, coreFile.name)
+            android.util.Log.d("VpnService", "Core path: $corePath")
+            android.util.Log.d("VpnService", "Core exists: ${coreFile.exists()}")
+            android.util.Log.d("VpnService", "Core size: ${coreFile.length()} bytes")
             
-            android.util.Log.d("VpnService", "Copying core from $corePath to ${executableCore.absolutePath}")
-            coreFile.copyTo(executableCore, overwrite = true)
-            
-            // Set executable permissions on the copy
+            // Set executable permissions
             try {
-                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", executableCore.absolutePath))
+                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath))
                 val chmodResult = chmodProcess.waitFor()
                 android.util.Log.d("VpnService", "chmod result: $chmodResult")
             } catch (e: Exception) {
-                android.util.Log.w("VpnService", "chmod failed, trying setExecutable", e)
+                android.util.Log.w("VpnService", "chmod failed", e)
             }
             
-            executableCore.setExecutable(true, false)
-            android.util.Log.d("VpnService", "Core executable: ${executableCore.canExecute()}")
+            coreFile.setExecutable(true, false)
+            android.util.Log.d("VpnService", "Core executable: ${coreFile.canExecute()}")
 
             // Build command list
             val command = mutableListOf<String>()
-            command.add(executableCore.absolutePath)
+            command.add(corePath)
             command.addAll(args)
             command.add(configPath)
             
             android.util.Log.d("VpnService", "Starting core with command: ${command.joinToString(" ")}")
 
-            // Start process directly without sh -c
+            // Start process
             val processBuilder = ProcessBuilder(command)
-            processBuilder.directory(cacheDir)
+            processBuilder.directory(coreFile.parentFile)
             processBuilder.redirectErrorStream(true)
             coreProcess = processBuilder.start()
             isRunning = true

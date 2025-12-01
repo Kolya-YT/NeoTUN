@@ -28,32 +28,33 @@ class CoreManager {
 
   Future<void> init() async {
     try {
-      // Сначала пробуем использовать локальную папку (проще для отладки)
-      final currentDir = Directory.current;
-      _coreDir = Directory('${currentDir.path}/cores');
-      
+      if (Platform.isAndroid) {
+        // На Android используем cache directory для исполняемых файлов
+        final tempDir = await getTemporaryDirectory();
+        _coreDir = Directory('${tempDir.path}/cores');
+        if (!await _coreDir.exists()) {
+          await _coreDir.create(recursive: true);
+        }
+        print('Using Android cache directory: ${_coreDir.path}');
+      } else {
+        // На других платформах используем локальную папку
+        final currentDir = Directory.current;
+        _coreDir = Directory('${currentDir.path}/cores');
+        
+        if (!await _coreDir.exists()) {
+          await _coreDir.create(recursive: true);
+        }
+        print('Using cores directory: ${_coreDir.path}');
+      }
+    } catch (e) {
+      print('Failed to initialize cores directory: $e');
+      // Fallback to temp directory
+      final tempDir = await getTemporaryDirectory();
+      _coreDir = Directory('${tempDir.path}/cores');
       if (!await _coreDir.exists()) {
         await _coreDir.create(recursive: true);
       }
-      print('Using cores directory: ${_coreDir.path}');
-    } catch (e) {
-      print('Failed to use local directory, trying app documents: $e');
-      try {
-        final appDir = await getApplicationDocumentsDirectory();
-        _coreDir = Directory('${appDir.path}/NeoTUN/cores');
-        if (!await _coreDir.exists()) {
-          await _coreDir.create(recursive: true);
-        }
-        print('Using app documents directory: ${_coreDir.path}');
-      } catch (e2) {
-        print('Failed to use app documents, using temp: $e2');
-        final tempDir = Directory.systemTemp;
-        _coreDir = Directory('${tempDir.path}/NeoTUN/cores');
-        if (!await _coreDir.exists()) {
-          await _coreDir.create(recursive: true);
-        }
-        print('Using temp directory: ${_coreDir.path}');
-      }
+      print('Using fallback temp directory: ${_coreDir.path}');
     }
   }
 
