@@ -170,6 +170,7 @@ class ConfigListTab extends StatefulWidget {
 class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final List<String> _logs = [];
   late AnimationController _slideController;
+  bool _useTunMode = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -263,6 +264,45 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
+                          // TUN Mode Toggle (at top)
+                          if (!isRunning)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _useTunMode ? Icons.vpn_lock : Icons.language,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _useTunMode ? 'TUN Mode' : 'Proxy Mode',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: _useTunMode,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _useTunMode = value;
+                                      });
+                                    },
+                                    activeColor: Colors.white,
+                                    activeTrackColor: Colors.green.shade300,
+                                  ),
+                                ],
+                              ),
+                            ),
                           Row(
                             children: [
                               // Status Icon
@@ -600,12 +640,15 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
 
   Future<void> _startConfig(VpnConfig config) async {
     try {
-      await CoreManager.instance.startCore(config);
+      await CoreManager.instance.startCore(config, useTun: _useTunMode);
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start: $e')),
+          SnackBar(
+            content: Text('Failed to start: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
