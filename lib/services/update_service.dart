@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -10,7 +11,8 @@ class UpdateService {
   static final UpdateService instance = UpdateService._();
   UpdateService._();
 
-  static const manifestUrl = 'https://raw.githubusercontent.com/yourusername/neotun/main/app_update.json';
+  static const manifestUrl = 'https://raw.githubusercontent.com/Kolya-YT/NeoTUN/main/app_update.json';
+  static const platform = MethodChannel('com.neotun.app/vpn');
   
   UpdateManifest? _latestManifest;
 
@@ -81,9 +83,11 @@ class UpdateService {
 
   Future<void> installUpdate(String filePath) async {
     if (Platform.isAndroid) {
-      // On Android, trigger install intent
-      // This requires additional platform channel implementation
-      throw UnimplementedError('Android install requires platform channel');
+      try {
+        await platform.invokeMethod('installApk', {'filePath': filePath});
+      } on PlatformException catch (e) {
+        throw Exception('Failed to install APK: ${e.message}');
+      }
     } else if (Platform.isWindows) {
       // On Windows, launch installer
       await Process.start(filePath, [], runInShell: true);

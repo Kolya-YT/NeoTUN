@@ -59,15 +59,29 @@ class VpnService : Service() {
         try {
             // Make core executable
             val coreFile = File(corePath)
-            coreFile.setExecutable(true, false)
+            if (!coreFile.exists()) {
+                throw Exception("Core file not found: $corePath")
+            }
+            
+            // Set executable permissions using chmod
+            try {
+                Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
+            } catch (e: Exception) {
+                android.util.Log.w("VpnService", "chmod failed, trying setExecutable", e)
+                coreFile.setExecutable(true, false)
+            }
 
-            // Build command
-            val command = mutableListOf(corePath)
-            command.addAll(args)
-            command.add(configPath)
+            // Build command with sh -c for Android
+            val commandStr = buildString {
+                append(corePath)
+                args.forEach { append(" $it") }
+                append(" $configPath")
+            }
+            
+            android.util.Log.d("VpnService", "Starting core with command: $commandStr")
 
-            // Start process
-            val processBuilder = ProcessBuilder(command)
+            // Start process using sh -c
+            val processBuilder = ProcessBuilder("sh", "-c", commandStr)
             processBuilder.redirectErrorStream(true)
             coreProcess = processBuilder.start()
             isRunning = true
@@ -85,6 +99,19 @@ class VpnService : Service() {
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("VpnService", "Error reading core output", e)
+                }
+            }.start()
+            
+            // Monitor process errors
+            Thread {
+                try {
+                    val reader = BufferedReader(InputStreamReader(coreProcess?.errorStream))
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        android.util.Log.e("VpnService", "Core Error: $line")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("VpnService", "Error reading core errors", e)
                 }
             }.start()
 
