@@ -28,8 +28,10 @@ android/app/libs/*.aar
 # Windows
 windows/flutter/ephemeral/
 
-# Cores
+# Cores and temporary files
 cores/
+temp_download/
+Xray-core/
 
 # Logs
 *.log

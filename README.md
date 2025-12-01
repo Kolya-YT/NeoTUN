@@ -6,7 +6,7 @@
 
 # NeoTUN
 
-![Version](https://img.shields.io/badge/version-v1.1.3-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.1.4-blue?style=for-the-badge)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE.txt)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-lightgrey?style=for-the-badge)](https://github.com/Kolya-YT/NeoTUN/releases)
