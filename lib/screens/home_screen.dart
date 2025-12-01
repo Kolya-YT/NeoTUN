@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.vpn_lock, size: 24),
@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.add, size: 20),
@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -239,7 +239,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: (isRunning ? Colors.green : Colors.grey).withValues(alpha: 0.3),
+                    color: (isRunning ? Colors.green : Colors.grey).withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -255,7 +255,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                         child: CustomPaint(
                           painter: WavePainter(
                             animation: widget.pulseController,
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: Colors.white.withOpacity(0.1),
                           ),
                         ),
                       ),
@@ -270,7 +270,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                               margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Colors.white.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
@@ -309,7 +309,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.3),
+                                  color: Colors.white.withOpacity(0.3),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -336,7 +336,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                       Text(
                                         activeConfig.name,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.9),
+                                          color: Colors.white.withOpacity(0.9),
                                           fontSize: 14,
                                         ),
                                         maxLines: 1,
@@ -391,7 +391,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                               height: 120,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.3),
+                                color: Colors.black.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: ListView.builder(
@@ -487,7 +487,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isActive ? Colors.blue : Colors.grey).withValues(alpha: 0.2),
+            color: (isActive ? Colors.blue : Colors.grey).withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -507,8 +507,8 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? Colors.white.withValues(alpha: 0.3)
-                        : Colors.blue.withValues(alpha: 0.1),
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -543,8 +543,8 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                             ),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? Colors.white.withValues(alpha: 0.3)
-                                  : Colors.grey.withValues(alpha: 0.2),
+                                  ? Colors.white.withOpacity(0.3)
+                                  : Colors.grey.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -563,7 +563,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.3),
+                                color: Colors.green.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(
