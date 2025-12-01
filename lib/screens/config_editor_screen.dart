@@ -52,7 +52,7 @@ class _ConfigEditorScreenState extends State<ConfigEditorScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<CoreType>(
-              initialValue: _selectedCore,
+              value: _selectedCore,
               decoration: const InputDecoration(labelText: 'Core Type'),
               items: CoreType.values.map((core) {
                 return DropdownMenuItem(
