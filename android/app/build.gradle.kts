@@ -60,3 +60,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // AndroidLibXrayLite для запуска Xray на Android
+    implementation("com.github.2dust:AndroidLibXrayLite:1.8.24")
+}
