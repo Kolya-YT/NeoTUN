@@ -211,9 +211,31 @@ class CoreManager {
         await tempFile.rename(corePath);
       }
       
-      // Set executable permission on Unix
+      // Set executable permission on Unix/Android
       if (!Platform.isWindows) {
-        await Process.run('chmod', ['+x', corePath]);
+        try {
+          // Try using chmod command
+          final result = await Process.run('chmod', ['755', corePath]);
+          if (result.exitCode != 0) {
+            print('chmod failed: ${result.stderr}');
+            // Try alternative method using File API
+            final file = File(corePath);
+            // On Android, we need to ensure the file is executable
+            if (Platform.isAndroid) {
+              // Copy to a location with executable permissions
+              final execDir = Directory('${_coreDir.path}/bin');
+              if (!await execDir.exists()) {
+                await execDir.create(recursive: true);
+              }
+              final execPath = '${execDir.path}/${coreType.executableName}';
+              await file.copy(execPath);
+              await file.delete();
+              await File(execPath).rename(corePath);
+            }
+          }
+        } catch (e) {
+          print('Failed to set executable permission: $e');
+        }
       }
       
       // Delete backup on success
@@ -330,11 +352,24 @@ class CoreManager {
     final args = _getStartArgs(config.coreType, configFile.path);
     
     try {
-      _runningProcess = await Process.start(
-        corePath, 
-        args,
-        runInShell: Platform.isWindows,
-      );
+      // On Android, we need to run through shell with explicit permissions
+      if (Platform.isAndroid) {
+        // Ensure executable permission before running
+        await Process.run('chmod', ['755', corePath]);
+        
+        // Run through shell
+        final command = '$corePath ${args.join(' ')}';
+        _runningProcess = await Process.start(
+          'sh',
+          ['-c', command],
+        );
+      } else {
+        _runningProcess = await Process.start(
+          corePath, 
+          args,
+          runInShell: Platform.isWindows,
+        );
+      }
       _activeConfig = config;
       
       _logController.add('[START] Core ${config.coreType.displayName} started');
