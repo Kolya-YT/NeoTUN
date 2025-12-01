@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../models/vpn_config.dart';
@@ -16,9 +17,25 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   final GlobalKey<_ConfigListTabState> _configListKey = GlobalKey();
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   void _refreshConfigs() {
     _configListKey.currentState?.refresh();
@@ -26,20 +43,67 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('NeoTUN'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [Colors.blue.shade900, Colors.purple.shade900]
+                  : [Colors.blue.shade400, Colors.purple.shade400],
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.vpn_lock, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'NeoTUN',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add, size: 20),
+            ),
             onPressed: () => _addConfig(),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          ConfigListTab(key: _configListKey),
+          ConfigListTab(
+            key: _configListKey,
+            pulseController: _pulseController,
+          ),
           const CoresScreen(),
           SettingsScreen(
             onThemeChanged: widget.onThemeChanged,
@@ -47,14 +111,38 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.list), label: 'Configs'),
-          NavigationDestination(icon: Icon(Icons.settings_applications), label: 'Cores'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+          height: 70,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.dns_outlined),
+              selectedIcon: Icon(Icons.dns),
+              label: 'Cores',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -68,14 +156,20 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class ConfigListTab extends StatefulWidget {
-  const ConfigListTab({super.key});
+  final AnimationController pulseController;
+  
+  const ConfigListTab({
+    super.key,
+    required this.pulseController,
+  });
 
   @override
   State<ConfigListTab> createState() => _ConfigListTabState();
 }
 
-class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveClientMixin {
+class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final List<String> _logs = [];
+  late AnimationController _slideController;
 
   @override
   bool get wantKeepAlive => true;
@@ -83,6 +177,11 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
   @override
   void initState() {
     super.initState();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
     CoreManager.instance.logStream.listen((log) {
       if (mounted) {
         setState(() {
@@ -91,6 +190,12 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
   }
   
   void refresh() {
@@ -105,106 +210,218 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
     final configs = ConfigStorage.instance.getConfigs();
     final isRunning = CoreManager.instance.isRunning;
     final activeConfig = CoreManager.instance.activeConfig;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: isRunning ? Colors.green.shade100 : Colors.grey.shade200,
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    isRunning ? Icons.check_circle : Icons.circle_outlined,
-                    color: isRunning ? Colors.green : Colors.grey,
+        // Status Card with Gradient
+        AnimatedBuilder(
+          animation: widget.pulseController,
+          builder: (context, child) {
+            return Container(
+              margin: const EdgeInsets.only(top: 100, left: 16, right: 16, bottom: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isRunning
+                      ? [
+                          Colors.green.shade400,
+                          Colors.teal.shade400,
+                        ]
+                      : [
+                          Colors.grey.shade300,
+                          Colors.grey.shade400,
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isRunning ? Colors.green : Colors.grey).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isRunning ? 'Connected: ${activeConfig?.name}' : 'Disconnected',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  if (isRunning)
-                    ElevatedButton.icon(
-                      onPressed: _stopCore,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
                 ],
               ),
-              if (isRunning && _logs.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  height: 100,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListView.builder(
-                    itemCount: _logs.length,
-                    itemBuilder: (context, index) {
-                      return Text(
-                        _logs[index],
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontSize: 10,
-                          fontFamily: 'monospace',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // Animated background
+                    if (isRunning)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: WavePainter(
+                            animation: widget.pulseController,
+                            color: Colors.white.withOpacity(0.1),
+                          ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              // Status Icon
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isRunning ? Icons.check_circle : Icons.power_settings_new,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              // Status Text
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isRunning ? 'Connected' : 'Disconnected',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (isRunning && activeConfig != null)
+                                      Text(
+                                        activeConfig.name,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              // Stop Button
+                              if (isRunning)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _stopCore,
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.stop_circle,
+                                              color: Colors.red.shade400,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Stop',
+                                              style: TextStyle(
+                                                color: Colors.red.shade400,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          // Logs
+                          if (isRunning && _logs.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              height: 120,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListView.builder(
+                                itemCount: _logs.length,
+                                reverse: true,
+                                itemBuilder: (context, index) {
+                                  final log = _logs[_logs.length - 1 - index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      log,
+                                      style: TextStyle(
+                                        color: _getLogColor(log),
+                                        fontSize: 11,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ],
-          ),
+              ),
+            );
+          },
         ),
+        // Configs List
         Expanded(
           child: configs.isEmpty
-              ? const Center(child: Text('No configs. Tap + to add.'))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_off,
+                        size: 80,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No configurations',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap + to add a new config',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: configs.length,
                   itemBuilder: (context, index) {
                     final config = configs[index];
                     final isActive = activeConfig?.id == config.id;
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      color: isActive ? Colors.green.shade50 : null,
-                      child: ListTile(
-                        leading: Icon(
-                          _getCoreIcon(config.coreType),
-                          color: isActive ? Colors.green : null,
-                        ),
-                        title: Text(
-                          config.name,
-                          style: TextStyle(
-                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text(config.coreType.displayName),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (!isActive)
-                              IconButton(
-                                icon: const Icon(Icons.play_arrow, color: Colors.green),
-                                onPressed: () => _startConfig(config),
-                              ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteConfig(config),
-                            ),
-                          ],
-                        ),
-                        onTap: () => _editConfig(config),
-                      ),
-                    );
+                    return _buildConfigCard(context, config, isActive, isDark);
                   },
                 ),
         ),
@@ -212,10 +429,168 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
     );
   }
 
+  Widget _buildConfigCard(BuildContext context, VpnConfig config, bool isActive, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        gradient: isActive
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.blue.shade400,
+                  Colors.purple.shade400,
+                ],
+              )
+            : null,
+        color: isActive ? null : (isDark ? Colors.grey.shade800 : Colors.white),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (isActive ? Colors.blue : Colors.grey).withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isActive ? null : () => _startConfig(config),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _getCoreIcon(config.coreType),
+                    color: isActive ? Colors.white : Colors.blue,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        config.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? Colors.white : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? Colors.white.withOpacity(0.3)
+                                  : Colors.grey.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              config.coreType.displayName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isActive ? Colors.white : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                          if (isActive) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.circle, size: 8, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Active',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Actions
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isActive)
+                      IconButton(
+                        icon: Icon(
+                          Icons.play_circle_filled,
+                          color: Colors.green.shade400,
+                          size: 32,
+                        ),
+                        onPressed: () => _startConfig(config),
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: isActive ? Colors.white : Colors.red.shade400,
+                      ),
+                      onPressed: () => _deleteConfig(config.id),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getLogColor(String log) {
+    if (log.contains('[ERROR]') || log.contains('[STDERR]')) {
+      return Colors.red.shade300;
+    } else if (log.contains('[PROXY]') || log.contains('✓')) {
+      return Colors.green.shade300;
+    } else if (log.contains('[STDOUT]')) {
+      return Colors.blue.shade300;
+    }
+    return Colors.white70;
+  }
+
   IconData _getCoreIcon(CoreType coreType) {
     switch (coreType) {
       case CoreType.xray:
-        return Icons.flight;
+        return Icons.flash_on;
       case CoreType.singbox:
         return Icons.inbox;
       case CoreType.hysteria2:
@@ -225,50 +600,12 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
 
   Future<void> _startConfig(VpnConfig config) async {
     try {
-      // Check if core is installed
-      if (!await CoreManager.instance.isCoreInstalled(config.coreType)) {
-        if (mounted) {
-          final download = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Core Not Installed'),
-              content: Text('${config.coreType.displayName} is not installed. Download now?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Download'),
-                ),
-              ],
-            ),
-          );
-          
-          if (download == true && mounted) {
-            // Переключаемся на вкладку Cores
-            final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-            homeState?.setState(() {
-              homeState._selectedIndex = 1;
-            });
-            return;
-          }
-        }
-        return;
-      }
-
       await CoreManager.instance.startCore(config);
-      setState(() {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connected')),
-        );
-      }
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Failed to start: $e')),
         );
       }
     }
@@ -276,22 +613,15 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
 
   Future<void> _stopCore() async {
     await CoreManager.instance.stopCore();
-    setState(() {
-      _logs.clear();
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Disconnected')),
-      );
-    }
+    if (mounted) setState(() {});
   }
 
-  Future<void> _deleteConfig(VpnConfig config) async {
-    final confirm = await showDialog<bool>(
+  Future<void> _deleteConfig(String id) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Config'),
-        content: Text('Delete "${config.name}"?'),
+        title: const Text('Delete Configuration'),
+        content: const Text('Are you sure you want to delete this configuration?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -299,24 +629,51 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await ConfigStorage.instance.deleteConfig(config.id);
-      setState(() {});
+    if (confirmed == true) {
+      await ConfigStorage.instance.deleteConfig(id);
+      if (mounted) setState(() {});
     }
   }
+}
 
-  void _editConfig(VpnConfig config) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ConfigEditorScreen(config: config),
-      ),
-    ).then((_) => setState(() {}));
+class WavePainter extends CustomPainter {
+  final Animation<double> animation;
+  final Color color;
+
+  WavePainter({required this.animation, required this.color}) : super(repaint: animation);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final waveHeight = 20.0;
+    final waveLength = size.width / 2;
+
+    path.moveTo(0, size.height);
+
+    for (double i = 0; i <= size.width; i++) {
+      path.lineTo(
+        i,
+        size.height - waveHeight * math.sin((i / waveLength + animation.value * 2) * math.pi),
+      );
+    }
+
+    path.lineTo(size.width, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
   }
+
+  @override
+  bool shouldRepaint(WavePainter oldDelegate) => true;
 }
