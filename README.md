@@ -6,7 +6,7 @@
 
 # NeoTUN
 
-![Version](https://img.shields.io/badge/version-v1.1.2-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.1.3-blue?style=for-the-badge)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE.txt)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-lightgrey?style=for-the-badge)](https://github.com/Kolya-YT/NeoTUN/releases)
@@ -211,10 +211,23 @@ NeoTUN поддерживает стандартные JSON конфигурац
 
 ## 📝 Changelog
 
-### v1.0.0 (1 декабря 2025)
+### v1.1.3 (1 декабря 2025)
+
+**Исправлено:**
+- 🔧 Критическая ошибка "Permission denied" на Android
+- 🔧 Автообновление приложения через FileProvider
+- 🔧 Поддержка всех Android архитектур (arm64, arm32, x64)
+
+### v1.1.2 (1 декабря 2025)
+
+**Изменено:**
+- 📝 Обновлена терминология: VPN → Proxy
+- 🧹 Очищен репозиторий
+
+### v1.1.0 (1 декабря 2025)
 
 **Добавлено:**
-- ✨ Первый публичный релиз
+- ✨ TUN режим для полного туннелирования
 - 🎨 Современный Material Design 3 интерфейс
 - 🚀 Поддержка XRay, sing-box, Hysteria2
 - 🔐 TUN и Proxy режимы
