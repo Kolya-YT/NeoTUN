@@ -12,7 +12,7 @@ class TunManager {
   static final TunManager instance = TunManager._();
   TunManager._();
 
-  static const platform = MethodChannel('com.neotun.app/tun');
+  static const platform = MethodChannel('com.neotun.app/vpn');
 
   TunMode _currentMode = TunMode.proxy;
   bool _isTunEnabled = false;

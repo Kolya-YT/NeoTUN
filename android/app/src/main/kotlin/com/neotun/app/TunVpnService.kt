@@ -61,6 +61,8 @@ class TunVpnService : VpnService() {
         }
 
         try {
+            android.util.Log.i("TunVpnService", "Starting TUN mode for $coreType")
+            
             // Создаем VPN интерфейс
             val builder = Builder()
                 .setSession("NeoTUN")
@@ -71,16 +73,27 @@ class TunVpnService : VpnService() {
                 .setMtu(9000)
                 .setBlocking(false)
 
-            // Исключаем локальные адреса
-            builder.addDisallowedApplication(packageName)
+            // Исключаем собственное приложение из VPN
+            try {
+                builder.addDisallowedApplication(packageName)
+                android.util.Log.d("TunVpnService", "Excluded own package from VPN")
+            } catch (e: Exception) {
+                android.util.Log.w("TunVpnService", "Could not exclude own package: ${e.message}")
+            }
 
+            // Устанавливаем VPN интерфейс
             vpnInterface = builder.establish()
 
             if (vpnInterface == null) {
-                android.util.Log.e("TunVpnService", "Failed to establish VPN interface")
+                android.util.Log.e("TunVpnService", "Failed to establish VPN interface - permission denied?")
                 stopSelf()
                 return
             }
+
+            android.util.Log.i("TunVpnService", "✓ VPN interface established")
+
+            // Запускаем foreground service сразу
+            startForeground(NOTIFICATION_ID, createNotification("Starting TUN Mode..."))
 
             // Запускаем ядро с TUN конфигурацией
             startCore(coreType, configPath)
@@ -89,12 +102,17 @@ class TunVpnService : VpnService() {
             startPacketForwarding()
 
             isRunning = true
-            startForeground(NOTIFICATION_ID, createNotification("TUN Mode Active"))
+            
+            // Обновляем уведомление
+            val notification = createNotification("TUN Mode Active")
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.notify(NOTIFICATION_ID, notification)
 
             android.util.Log.i("TunVpnService", "✓ TUN VPN started successfully")
 
         } catch (e: Exception) {
-            android.util.Log.e("TunVpnService", "Failed to start TUN", e)
+            android.util.Log.e("TunVpnService", "Failed to start TUN: ${e.message}", e)
+            e.printStackTrace()
             stopSelf()
         }
     }
