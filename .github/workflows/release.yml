@@ -185,6 +185,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Update app_update.json
         env:
@@ -218,4 +221,5 @@ jobs:
           git config user.email "actions@github.com"
           git add app_update.json
           git commit -m "Update app_update.json for version $VERSION"
+          git push origin main
           git push
