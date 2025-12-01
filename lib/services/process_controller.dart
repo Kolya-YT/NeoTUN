@@ -130,6 +130,24 @@ class ProcessController {
     }
   }
 
+  Future<bool> checkStatus() async {
+    if (Platform.isAndroid) {
+      try {
+        final result = await platform.invokeMethod('isRunning');
+        _isRunning = result == true;
+        if (_isRunning) {
+          _statusController.add(ProcessStatus.running);
+        } else {
+          _statusController.add(ProcessStatus.stopped);
+        }
+        return _isRunning;
+      } catch (e) {
+        return false;
+      }
+    }
+    return _isRunning;
+  }
+
   Future<bool> healthCheck(String corePath) async {
     try {
       final result = await Process.run(

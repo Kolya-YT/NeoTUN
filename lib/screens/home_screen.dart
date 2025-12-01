@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
+import '../services/process_controller.dart';
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
 import 'config_editor_screen.dart';
@@ -29,6 +30,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat();
+    
+    // Проверяем состояние VPN при запуске (для Android)
+    _checkVpnStatus();
+  }
+  
+  Future<void> _checkVpnStatus() async {
+    try {
+      await ProcessController.instance.checkStatus();
+    } catch (e) {
+      print('Failed to check VPN status: $e');
+    }
   }
 
   @override

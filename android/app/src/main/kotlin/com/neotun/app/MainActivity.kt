@@ -33,6 +33,12 @@ class MainActivity: FlutterActivity() {
                     stopVpnService()
                     result.success(true)
                 }
+                "isRunning" -> {
+                    // Проверяем запущен ли VPN сервис
+                    val isRunning = isServiceRunning(VpnService::class.java) || 
+                                   isServiceRunning(TunVpnService::class.java)
+                    result.success(isRunning)
+                }
                 "startTun" -> {
                     val coreType = call.argument<String>("coreType")
                     val configPath = call.argument<String>("configPath")
@@ -149,6 +155,17 @@ class MainActivity: FlutterActivity() {
         }
         
         startActivity(intent)
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+        @Suppress("DEPRECATION")
+        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 
     companion object {
