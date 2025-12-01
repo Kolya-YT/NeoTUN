@@ -25,7 +25,6 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
 }
-}
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
