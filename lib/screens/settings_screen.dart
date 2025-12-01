@@ -289,12 +289,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     Navigator.pop(context);
+                    final messenger = ScaffoldMessenger.of(context);
                     try {
                       // Открываем проводник с выделенным файлом
                       await Process.run('explorer', ['/select,', filePath], runInShell: true);
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(content: Text('Could not open folder: $e')),
                         );
                       }
@@ -320,11 +321,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     Navigator.pop(context);
+                    final messenger = ScaffoldMessenger.of(context);
                     try {
                       await UpdateService.instance.installUpdate(filePath);
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(content: Text('Installation failed: $e')),
                         );
                       }
