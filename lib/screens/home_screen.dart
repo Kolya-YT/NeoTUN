@@ -57,8 +57,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDark
-                  ? [Colors.blue.shade900, Colors.purple.shade900]
-                  : [Colors.blue.shade400, Colors.purple.shade400],
+                  ? [
+                      const Color(0xFF6366F1), // Indigo
+                      const Color(0xFF8B5CF6), // Purple
+                    ]
+                  : [
+                      const Color(0xFF6366F1),
+                      const Color(0xFFA855F7),
+                    ],
             ),
           ),
         ),
@@ -228,13 +234,18 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                   end: Alignment.bottomRight,
                   colors: isRunning
                       ? [
-                          Colors.green.shade400,
-                          Colors.teal.shade400,
+                          const Color(0xFF10B981), // Emerald
+                          const Color(0xFF06B6D4), // Cyan
                         ]
-                      : [
-                          Colors.grey.shade300,
-                          Colors.grey.shade400,
-                        ],
+                      : isDark
+                          ? [
+                              const Color(0xFF475569),
+                              const Color(0xFF334155),
+                            ]
+                          : [
+                              const Color(0xFF94A3B8),
+                              const Color(0xFF64748B),
+                            ],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
