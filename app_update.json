@@ -4,11 +4,11 @@
   "platforms": {
     "windows-x64": {
       "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/NeoTUN-Windows-x64.zip",
-      "sha256": "5cde983cf67b9d6eced92133b507b8f35b6112d58813013d150dc219531ec7d4"
+      "sha256": "63d77a7bc6d2b20638bc3ff4caeea61a309f28b4ed470c9f3ddca04e238a33ca"
     },
     "android-arm64": {
       "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.1.3/app-arm64-v8a-release.apk",
-      "sha256": "b62825e46f906fcfae3f4dedc1cad99c078f7bb2eac908d4690c8629d77bd49f"
+      "sha256": "199ec35d027823cf625a5bfee8f65aa85b0ce1a93381c1cc889bab9870c2d048"
     }
   }
 }
