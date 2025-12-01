@@ -1,5 +1,47 @@
 # Changelog - NeoTUN
 
+## [1.1.4] - 2025-12-02 (В разработке)
+
+### 🚀 Новое
+
+#### Android - AndroidLibXrayLite интеграция
+- ✅ **Интегрирована нативная библиотека AndroidLibXrayLite**
+  - Создан `XrayHelper.kt` wrapper для работы с libxray.so
+  - Xray теперь работает через нативную библиотеку (без root!)
+  - Решена проблема SELinux permissions
+  - Используется та же библиотека что и в v2rayNG
+  
+- ✅ **Обновлены VPN сервисы**
+  - `VpnService.kt` - автоматическое определение типа ядра
+  - `TunVpnService.kt` - поддержка нативного Xray в TUN режиме
+  - Для Xray: AndroidLibXrayLite (native)
+  - Для sing-box/Hysteria2: Process (требует TUN или root)
+
+#### Документация
+- ✅ Создан `ANDROID_XRAY_SETUP.md` - подробная инструкция
+- ✅ Создан `QUICK_START_ANDROID.md` - быстрый старт
+- ✅ Создан `.github/ANDROID_BUILD.md` - CI/CD инструкции
+- ✅ Создан `INTEGRATION_CHECKLIST.md` - чеклист задач
+- ✅ Создан `INTEGRATION_SUMMARY.md` - итоговая сводка
+- ✅ Обновлен `README.md` - добавлена архитектура и ссылки
+
+#### Скрипты
+- ✅ `download_xray_aar.ps1` - автоматическая загрузка AAR
+- ✅ `check_xray_aar.ps1` - проверка наличия AAR
+
+### 🔧 Улучшения
+- ✅ Windows версия не затронута - продолжает использовать xray.exe
+- ✅ Платформо-специфичная реализация
+- ✅ Единый Flutter код для обеих платформ
+- ✅ Улучшенное логирование
+
+### 📦 Зависимости
+- ✅ Добавлена зависимость на AndroidLibXrayLite AAR
+- ✅ Обновлен `android/app/build.gradle.kts`
+- ✅ Обновлен `.gitignore` для исключения AAR файлов
+
+---
+
 ## [1.1.3] - 2025-12-01
 
 ### 🐛 Исправления

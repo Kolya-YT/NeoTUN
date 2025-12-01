@@ -60,3 +60,11 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // AndroidLibXrayLite для работы с Xray на Android
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    
+    // Или через Maven (если AAR доступен)
+    // implementation("com.github.2dust:AndroidLibXrayLite:1.8.24")
+}

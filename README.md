@@ -28,8 +28,14 @@
 
 ### 🚀 Поддержка ядер
 - **XRay-core** - Популярное ядро с поддержкой VLESS, VMess, Trojan
+  - Android: AndroidLibXrayLite (нативная библиотека, без root)
+  - Windows: xray.exe
 - **sing-box** - Современное ядро с TUN режимом
+  - Android: требует TUN режим или root
+  - Windows: sing-box.exe
 - **Hysteria2** - Высокоскоростной протокол на базе QUIC
+  - Android: требует TUN режим или root
+  - Windows: hysteria2.exe
 
 ### 🎨 Интерфейс
 - **Material Design 3** - Современный дизайн
@@ -208,6 +214,41 @@ NeoTUN поддерживает стандартные JSON конфигурац
 - TUN режим работает только на Android
 - На Windows требуются права администратора для системного прокси
 - Некоторые антивирусы могут блокировать ядра (добавьте в исключения)
+- sing-box и Hysteria2 на Android требуют TUN режим или root (планируется интеграция нативных библиотек)
+
+## 🏗️ Архитектура
+
+### Android - Xray (нативная библиотека)
+```
+Flutter App (Dart)
+    ↓
+MethodChannel
+    ↓
+VpnService.kt
+    ↓
+XrayHelper.kt
+    ↓
+libxray.so (AndroidLibXrayLite)
+```
+
+### Windows - все ядра
+```
+Flutter App (Dart)
+    ↓
+ProcessController
+    ↓
+Process.start()
+    ↓
+xray.exe / sing-box.exe / hysteria2.exe
+```
+
+## 📚 Дополнительная документация
+
+- [Настройка AndroidLibXrayLite](ANDROID_XRAY_SETUP.md) - Подробная инструкция по интеграции
+- [Быстрый старт Android](QUICK_START_ANDROID.md) - Быстрая сборка APK
+- [Android Issues](ANDROID_ISSUE.md) - История решения проблем на Android
+- [Чеклист интеграции](INTEGRATION_CHECKLIST.md) - Список выполненных задач
+- [Итоговая сводка](INTEGRATION_SUMMARY.md) - Полная сводка изменений
 
 ## 📝 Changelog
 

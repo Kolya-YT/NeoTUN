@@ -15,7 +15,9 @@ import java.io.InputStreamReader
 
 class VpnService : Service() {
     private var coreProcess: Process? = null
+    private var xrayHelper: XrayHelper? = null
     private var isRunning = false
+    private var useNativeXray = false
 
     companion object {
         const val CHANNEL_ID = "neotun_vpn_channel"
@@ -30,6 +32,7 @@ class VpnService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        xrayHelper = XrayHelper(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -57,6 +60,31 @@ class VpnService : Service() {
         }
 
         try {
+            // Определяем тип ядра по пути
+            val isXray = corePath.contains("xray", ignoreCase = true)
+            
+            // Для Xray используем нативную библиотеку AndroidLibXrayLite
+            if (isXray && xrayHelper != null) {
+                android.util.Log.i("VpnService", "Using native AndroidLibXrayLite")
+                useNativeXray = true
+                
+                val success = xrayHelper!!.start(configPath)
+                if (!success) {
+                    throw Exception("Failed to start Xray via native library")
+                }
+                
+                isRunning = true
+                startForeground(NOTIFICATION_ID, createNotification("VPN Connected (Native Xray)"))
+                
+                android.util.Log.i("VpnService", "✓ Native Xray started successfully")
+                android.util.Log.i("VpnService", "Xray version: ${xrayHelper!!.getVersion()}")
+                return
+            }
+            
+            // Для других ядер (sing-box, hysteria2) используем старый метод
+            android.util.Log.i("VpnService", "Using process execution for non-Xray core")
+            useNativeXray = false
+            
             val coreFile = File(corePath)
             if (!coreFile.exists()) {
                 throw Exception("Core file not found: $corePath")
@@ -135,10 +163,19 @@ class VpnService : Service() {
 
     private fun stopCore() {
         try {
+            // Если использовали нативный Xray
+            if (useNativeXray && xrayHelper != null) {
+                xrayHelper!!.stop()
+                android.util.Log.i("VpnService", "✓ Native Xray stopped")
+            }
+            
+            // Останавливаем процесс если был запущен
             coreProcess?.destroy()
             coreProcess?.waitFor()
             coreProcess = null
+            
             isRunning = false
+            useNativeXray = false
         } catch (e: Exception) {
             android.util.Log.e("VpnService", "Error stopping core", e)
         }

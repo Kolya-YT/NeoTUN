@@ -17,8 +17,10 @@ import java.nio.ByteBuffer
 class TunVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var coreProcess: Process? = null
+    private var xrayHelper: XrayHelper? = null
     private var isRunning = false
     private var tunThread: Thread? = null
+    private var useNativeXray = false
 
     companion object {
         const val CHANNEL_ID = "neotun_tun_channel"
@@ -32,6 +34,7 @@ class TunVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        xrayHelper = XrayHelper(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,6 +101,25 @@ class TunVpnService : VpnService() {
 
     private fun startCore(coreType: String, configPath: String) {
         try {
+            // Для Xray используем нативную библиотеку
+            if (coreType == "xray" && xrayHelper != null) {
+                android.util.Log.i("TunVpnService", "Using native AndroidLibXrayLite for TUN")
+                useNativeXray = true
+                
+                val success = xrayHelper!!.start(configPath)
+                if (!success) {
+                    throw Exception("Failed to start Xray via native library")
+                }
+                
+                android.util.Log.i("TunVpnService", "✓ Native Xray started in TUN mode")
+                android.util.Log.i("TunVpnService", "Xray version: ${xrayHelper!!.getVersion()}")
+                return
+            }
+            
+            // Для других ядер используем процессы
+            android.util.Log.i("TunVpnService", "Using process execution for non-Xray core")
+            useNativeXray = false
+            
             val corePath = when (coreType) {
                 "xray" -> "${applicationContext.filesDir}/cores/xray"
                 "singbox" -> "${applicationContext.filesDir}/cores/sing-box"
@@ -179,12 +201,20 @@ class TunVpnService : VpnService() {
             tunThread?.interrupt()
             tunThread = null
 
+            // Останавливаем нативный Xray если использовался
+            if (useNativeXray && xrayHelper != null) {
+                xrayHelper!!.stop()
+                android.util.Log.i("TunVpnService", "✓ Native Xray stopped")
+            }
+
             coreProcess?.destroy()
             coreProcess?.waitFor()
             coreProcess = null
 
             vpnInterface?.close()
             vpnInterface = null
+            
+            useNativeXray = false
 
             android.util.Log.i("TunVpnService", "✓ TUN VPN stopped")
         } catch (e: Exception) {
