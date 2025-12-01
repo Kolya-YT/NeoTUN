@@ -66,29 +66,40 @@ class VpnService : Service() {
             android.util.Log.d("VpnService", "Core exists: ${coreFile.exists()}")
             android.util.Log.d("VpnService", "Core size: ${coreFile.length()} bytes")
             
-            // Set executable permissions
+            // Set executable permissions - try multiple methods
             try {
-                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath))
-                val chmodResult = chmodProcess.waitFor()
-                android.util.Log.d("VpnService", "chmod result: $chmodResult")
+                Runtime.getRuntime().exec(arrayOf("chmod", "777", corePath)).waitFor()
+                android.util.Log.d("VpnService", "chmod 777 completed")
             } catch (e: Exception) {
-                android.util.Log.w("VpnService", "chmod failed", e)
+                android.util.Log.w("VpnService", "chmod 777 failed", e)
             }
             
             coreFile.setExecutable(true, false)
+            coreFile.setReadable(true, false)
             android.util.Log.d("VpnService", "Core executable: ${coreFile.canExecute()}")
 
-            // Build command list
-            val command = mutableListOf<String>()
-            command.add(corePath)
-            command.addAll(args)
-            command.add(configPath)
+            // Build command string for sh -c
+            val commandStr = buildString {
+                append("cd \"${coreFile.parent}\" && ")
+                append("chmod 777 \"${coreFile.name}\" && ")
+                append("\"${coreFile.absolutePath}\"")
+                args.forEach { arg ->
+                    append(" ")
+                    if (arg.contains(" ")) {
+                        append("\"$arg\"")
+                    } else {
+                        append(arg)
+                    }
+                }
+                append(" \"$configPath\"")
+            }
             
-            android.util.Log.d("VpnService", "Starting core with command: ${command.joinToString(" ")}")
+            android.util.Log.d("VpnService", "Starting core with sh -c: $commandStr")
 
-            // Start process
-            val processBuilder = ProcessBuilder(command)
-            processBuilder.directory(coreFile.parentFile)
+            // Start process using sh -c to bypass SELinux restrictions
+            val processBuilder = ProcessBuilder("sh", "-c", commandStr)
+            val env = processBuilder.environment()
+            env["LD_LIBRARY_PATH"] = coreFile.parent
             processBuilder.redirectErrorStream(true)
             coreProcess = processBuilder.start()
             isRunning = true
