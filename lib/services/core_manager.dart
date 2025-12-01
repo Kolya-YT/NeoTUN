@@ -374,6 +374,24 @@ class CoreManager {
     _logController.add('[ARGS] Command arguments: ${args.join(' ')}');
     
     try {
+      // Если используем TUN режим - запускаем через TunManager
+      if (useTun) {
+        _logController.add('[TUN] Starting core in TUN mode');
+        final success = await TunManager.instance.enableTun(
+          coreType: config.coreType,
+          configPath: configFile.path,
+        );
+        
+        if (!success) {
+          throw Exception('Failed to start TUN mode');
+        }
+        
+        _activeConfig = config;
+        _logController.add('[TUN] Core started successfully in TUN mode');
+        return;
+      }
+      
+      // Proxy режим - запускаем через Process
       // On Android, we need to run through shell with explicit permissions
       if (Platform.isAndroid) {
         // Ensure executable permission before running
@@ -487,9 +505,16 @@ class CoreManager {
   }
 
   Future<void> stopCore() async {
+    _logController.add('[STOP] Stopping core...');
+    
+    // Останавливаем TUN если активен
+    if (TunManager.instance.isTunEnabled) {
+      await TunManager.instance.disableTun();
+      _logController.add('[TUN] ✓ TUN mode disabled');
+    }
+    
+    // Останавливаем процесс если запущен
     if (_runningProcess != null) {
-      _logController.add('[STOP] Stopping core...');
-      
       // Отключаем системный прокси
       await SystemProxy.instance.disableProxy();
       _logController.add('[PROXY] ✓ System proxy disabled');
@@ -504,9 +529,10 @@ class CoreManager {
       }
       
       _runningProcess = null;
-      _activeConfig = null;
-      _logController.add('[STOP] ✓ Core stopped');
     }
+    
+    _activeConfig = null;
+    _logController.add('[STOP] ✓ Core stopped');
   }
 
 
