@@ -331,6 +331,13 @@ class CoreManager {
 
   Future<void> startCore(VpnConfig config, {bool useTun = false}) async {
     if (_runningProcess != null) await stopCore();
+    
+    // На Android всегда используем TUN режим из-за проблем с правами
+    if (Platform.isAndroid) {
+      useTun = true;
+      _logController.add('[ANDROID] Forcing TUN mode due to permission restrictions');
+    }
+    
     final corePath = getCorePath(config.coreType);
     if (!await File(corePath).exists()) throw Exception('Core ${config.coreType.displayName} not installed');
     
