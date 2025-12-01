@@ -6,12 +6,12 @@
 
 # NeoTUN
 
-![Version](https://img.shields.io/badge/version-v1.1.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.1.2-blue?style=for-the-badge)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE.txt)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-lightgrey?style=for-the-badge)](https://github.com/Kolya-YT/NeoTUN/releases)
 
-**Современный кроссплатформенный VPN клиент с поддержкой множественных ядер**
+**Современный кроссплатформенный прокси клиент с поддержкой множественных ядер**
 
 [Скачать](https://github.com/Kolya-YT/NeoTUN/releases) • [Документация](#-возможности) • [Сообщить об ошибке](https://github.com/Kolya-YT/NeoTUN/issues)
 
@@ -102,7 +102,7 @@
 
 - Откройте браузер
 - Проверьте свой IP адрес
-- Убедитесь, что трафик идет через VPN
+- Убедитесь, что трафик идет через прокси
 
 ## 🛠️ Сборка из исходников
 
@@ -141,7 +141,7 @@ flutter build apk --release --split-per-abi
 lib/
 ├── main.dart                 # Точка входа
 ├── models/                   # Модели данных
-│   ├── vpn_config.dart      # Конфигурация VPN
+│   ├── vpn_config.dart      # Конфигурация прокси
 │   ├── core_type.dart       # Типы ядер
 │   └── core_manifest.dart   # Манифест ядер
 ├── screens/                  # Экраны приложения
@@ -235,7 +235,7 @@ NeoTUN поддерживает стандартные JSON конфигурац
 
 ## 🙏 Благодарности
 
-- [XRay-core](https://github.com/XTLS/Xray-core) - Мощное ядро VPN
+- [XRay-core](https://github.com/XTLS/Xray-core) - Мощное прокси ядро
 - [sing-box](https://github.com/SagerNet/sing-box) - Универсальный прокси
 - [Hysteria](https://github.com/apernet/hysteria) - Высокоскоростной протокол
 - [Flutter](https://flutter.dev) - Кроссплатформенный фреймворк
