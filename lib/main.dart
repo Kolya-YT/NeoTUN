@@ -73,13 +73,6 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        cardTheme: CardTheme(
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
@@ -115,13 +108,6 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardTheme: CardTheme(
-          elevation: 0,
-          color: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,

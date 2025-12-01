@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'dart:convert';
 import '../services/config_storage.dart';
 import '../services/update_service.dart';
 import '../services/core_manager.dart';
@@ -387,24 +388,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _importConfig() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['json', 'yaml', 'yml'],
+      allowedExtensions: ['json', 'yaml', 'yml', 'txt'],
+      dialogTitle: 'Select config file',
     );
 
     if (result != null) {
       try {
         final file = File(result.files.single.path!);
         final content = await file.readAsString();
-        await ConfigStorage.instance.importConfig(content);
+        
+        // Проверяем что это валидный JSON
+        try {
+          final decoded = jsonDecode(content);
+          if (decoded is! Map) {
+            throw Exception('Config must be a JSON object');
+          }
+        } catch (e) {
+          throw Exception('Invalid JSON format: $e');
+        }
+        
+        // Импортируем конфигурацию
+        final config = await ConfigStorage.instance.importConfig(content);
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Config imported successfully')),
+            SnackBar(
+              content: Text('✓ Config "${config.name}" imported successfully'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
           );
+          
+          // Обновляем список конфигураций
+          widget.onConfigsChanged?.call();
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Import failed: $e')),
+            SnackBar(
+              content: Text('Import failed: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
