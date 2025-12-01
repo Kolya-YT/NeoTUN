@@ -2,9 +2,14 @@
 
 <div align="center">
 
-![NeoTUN Logo](https://img.shields.io/badge/NeoTUN-v1.0.0-blue?style=for-the-badge)
+<img src="assets/images/logo.png" alt="NeoTUN Logo" width="200"/>
+
+# NeoTUN
+
+![Version](https://img.shields.io/badge/version-v1.0.0-blue?style=for-the-badge)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE.txt)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-lightgrey?style=for-the-badge)](https://github.com/Kolya-YT/NeoTUN/releases)
 
 **Современный кроссплатформенный VPN клиент с поддержкой множественных ядер**
 
