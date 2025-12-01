@@ -31,21 +31,8 @@ windows/flutter/ephemeral/
 # Cores
 cores/
 
-# Development docs and logs
-*_FIX.md
-*_BUILD*.md
-*_STATUS*.md
-SUCCESS_*.md
-FINAL_*.md
+# Logs
 *.log
-error_*.log
-output_*.log
-temp_*.txt
-
-# Build scripts and tools
-*.ps1
-platform-tools-*.zip
-keystore_base64.txt
 
 # Old/backup files
 *_old.*

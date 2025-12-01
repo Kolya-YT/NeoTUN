@@ -242,13 +242,11 @@ Process.start()
 xray.exe / sing-box.exe / hysteria2.exe
 ```
 
-## 📚 Дополнительная документация
+## 📚 Документация
 
-- [Настройка AndroidLibXrayLite](ANDROID_XRAY_SETUP.md) - Подробная инструкция по интеграции
-- [Быстрый старт Android](QUICK_START_ANDROID.md) - Быстрая сборка APK
-- [Android Issues](ANDROID_ISSUE.md) - История решения проблем на Android
-- [Чеклист интеграции](INTEGRATION_CHECKLIST.md) - Список выполненных задач
-- [Итоговая сводка](INTEGRATION_SUMMARY.md) - Полная сводка изменений
+- [Android Setup](docs/ANDROID_SETUP.md) - Настройка и сборка для Android
+- [Build Instructions](docs/BUILD.md) - Инструкции по сборке для всех платформ
+- [CHANGELOG](CHANGELOG.md) - История изменений
 
 ## 📝 Changelog
 
