@@ -117,7 +117,7 @@ class _ConnectionModeSelectorState extends State<ConnectionModeSelector> {
       case TunMode.proxy:
         return 'System proxy mode - Works with most apps, requires manual proxy configuration in some cases';
       case TunMode.tun:
-        return 'TUN mode - Full traffic capture, works with all apps automatically (requires TUN permission on Android)';
+        return 'TUN mode - Full traffic capture, works with all apps automatically (requires VPN permission on Android)';
     }
   }
 }
