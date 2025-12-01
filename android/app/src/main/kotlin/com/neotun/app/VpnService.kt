@@ -63,22 +63,35 @@ class VpnService : Service() {
                 throw Exception("Core file not found: $corePath")
             }
             
-            // Set executable permissions using chmod
+            // Set executable permissions - multiple attempts
+            var chmodSuccess = false
             try {
-                Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
+                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath))
+                chmodSuccess = chmodProcess.waitFor() == 0
+                android.util.Log.d("VpnService", "chmod result: $chmodSuccess")
             } catch (e: Exception) {
-                android.util.Log.w("VpnService", "chmod failed, trying setExecutable", e)
-                coreFile.setExecutable(true, false)
+                android.util.Log.w("VpnService", "chmod failed", e)
+            }
+            
+            if (!chmodSuccess) {
+                try {
+                    coreFile.setExecutable(true, false)
+                    android.util.Log.d("VpnService", "setExecutable called")
+                } catch (e: Exception) {
+                    android.util.Log.w("VpnService", "setExecutable failed", e)
+                }
             }
 
-            // Build command with sh -c for Android
+            // Build command - use absolute path with sh
             val commandStr = buildString {
-                append(corePath)
-                args.forEach { append(" $it") }
-                append(" $configPath")
+                append("cd ${coreFile.parent} && ")
+                append("./${coreFile.name}")
+                args.forEach { append(" \"$it\"") }
+                append(" \"$configPath\"")
             }
             
             android.util.Log.d("VpnService", "Starting core with command: $commandStr")
+            android.util.Log.d("VpnService", "Core file permissions: ${coreFile.canExecute()}")
 
             // Start process using sh -c
             val processBuilder = ProcessBuilder("sh", "-c", commandStr)
