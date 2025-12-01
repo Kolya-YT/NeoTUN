@@ -44,11 +44,11 @@ class _ConnectionModeSelectorState extends State<ConnectionModeSelector> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.swap_horiz, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.swap_horiz, size: 20),
+                SizedBox(width: 8),
+                Text(
                   'Connection Mode',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -60,10 +60,10 @@ class _ConnectionModeSelectorState extends State<ConnectionModeSelector> {
             const SizedBox(height: 12),
             SegmentedButton<TunMode>(
               segments: [
-                ButtonSegment<TunMode>(
+                const ButtonSegment<TunMode>(
                   value: TunMode.proxy,
-                  label: const Text('Proxy'),
-                  icon: const Icon(Icons.language),
+                  label: Text('Proxy'),
+                  icon: Icon(Icons.language),
                 ),
                 ButtonSegment<TunMode>(
                   value: TunMode.tun,

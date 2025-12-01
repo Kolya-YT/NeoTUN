@@ -308,7 +308,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                         _useTunMode = value;
                                       });
                                     },
-                                    activeColor: Colors.white,
+                                    activeThumbColor: Colors.white,
                                     activeTrackColor: Colors.green.shade300,
                                   ),
                                 ],
