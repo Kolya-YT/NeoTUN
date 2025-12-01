@@ -155,19 +155,24 @@ jobs:
           name: windows-exe
           path: release/windows
 
-      - name: Calculate checksums
+      - name: Prepare release files
         run: |
-          cd release
-          find . -type f \( -name "*.apk" -o -name "*.zip" \) -exec sha256sum {} \; > checksums.txt
+          mkdir -p final-release
+          # Copy only split APKs (not universal)
+          cp release/android/app-arm64-v8a-release.apk final-release/ || true
+          cp release/android/app-armeabi-v7a-release.apk final-release/ || true
+          cp release/android/app-x86_64-release.apk final-release/ || true
+          # Copy Windows ZIP
+          cp release/windows/NeoTUN-Windows-x64.zip final-release/
+          # Calculate checksums
+          cd final-release
+          sha256sum * > checksums.txt
           cat checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            release/android/*.apk
-            release/windows/*.zip
-            release/checksums.txt
+          files: final-release/*
           draft: false
           prerelease: false
           generate_release_notes: true
