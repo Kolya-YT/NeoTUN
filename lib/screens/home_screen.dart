@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../services/process_controller.dart';
+import '../services/traffic_stats.dart';
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
 import 'config_editor_screen.dart';
 import 'cores_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(bool)? onThemeChanged;
@@ -108,6 +110,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.bar_chart, size: 20),
+            ),
+            onPressed: () => _openStats(),
+          ),
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.add, size: 20),
             ),
             onPressed: () => _addConfig(),
@@ -170,6 +183,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (context) => const ConfigEditorScreen()),
     ).then((_) => setState(() {}));
+  }
+
+  void _openStats() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StatsScreen()),
+    );
   }
 }
 

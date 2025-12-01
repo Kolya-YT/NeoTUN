@@ -10,6 +10,7 @@ import '../models/core_manifest.dart';
 import 'download_service.dart';
 import 'system_proxy.dart';
 import 'tun_manager.dart';
+import 'traffic_stats.dart';
 
 class CoreManager {
   static final CoreManager instance = CoreManager._();
@@ -412,6 +413,9 @@ class CoreManager {
       }
       _activeConfig = config;
       
+      // Start traffic statistics
+      TrafficStats.instance.startSession();
+      
       _logController.add('[START] Core ${config.coreType.displayName} started');
       _logController.add('[CONFIG] Using config: ${configFile.path}');
       _logController.add('[COMMAND] $corePath ${args.join(' ')}');
@@ -532,6 +536,10 @@ class CoreManager {
     }
     
     _activeConfig = null;
+    
+    // Stop traffic statistics
+    TrafficStats.instance.stopSession();
+    
     _logController.add('[STOP] ✓ Core stopped');
   }
 
