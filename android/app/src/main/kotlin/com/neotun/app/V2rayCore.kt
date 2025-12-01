@@ -8,12 +8,20 @@ object V2rayCore {
     
     init {
         try {
-            System.loadLibrary("v2ray")
+            // Пробуем загрузить наш libxray.so
+            System.loadLibrary("xray")
             isLoaded = true
-            Log.i(TAG, "libv2ray.so loaded successfully")
+            Log.i(TAG, "libxray.so loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Failed to load libv2ray.so", e)
-            isLoaded = false
+            try {
+                // Fallback на libv2ray.so если есть
+                System.loadLibrary("v2ray")
+                isLoaded = true
+                Log.i(TAG, "libv2ray.so loaded successfully")
+            } catch (e2: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to load native library", e2)
+                isLoaded = false
+            }
         }
     }
     
