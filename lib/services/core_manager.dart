@@ -29,13 +29,13 @@ class CoreManager {
   Future<void> init() async {
     try {
       if (Platform.isAndroid) {
-        // На Android используем cache directory для исполняемых файлов
-        final tempDir = await getTemporaryDirectory();
-        _coreDir = Directory('${tempDir.path}/cores');
+        // На Android используем app support directory (имеет правильные SELinux контексты)
+        final appDir = await getApplicationSupportDirectory();
+        _coreDir = Directory('${appDir.path}/cores');
         if (!await _coreDir.exists()) {
           await _coreDir.create(recursive: true);
         }
-        print('Using Android cache directory: ${_coreDir.path}');
+        print('Using Android app support directory: ${_coreDir.path}');
       } else {
         // На других платформах используем локальную папку
         final currentDir = Directory.current;
