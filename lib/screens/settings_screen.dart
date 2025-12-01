@@ -7,7 +7,6 @@ import '../services/config_storage.dart';
 import '../services/update_service.dart';
 import '../services/core_manager.dart';
 import '../services/subscription_parser.dart';
-import '../services/tun_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(bool)? onThemeChanged;

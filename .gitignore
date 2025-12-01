@@ -13,6 +13,9 @@ build/
 
 # Android
 *.jks
+key.properties
+android/key.properties
+android/app/keystore.jks
 local.properties
 android/.gradle/
 android/captures/
