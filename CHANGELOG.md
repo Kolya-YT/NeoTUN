@@ -1,6 +1,6 @@
 # Changelog - NeoTUN
 
-## [1.1.4] - 2025-12-02
+## [1.1.4] - 2024-12-02
 
 ### 🚀 Новое
 
@@ -40,11 +40,11 @@
   - Добавлены четкие инструкции для пользователя
   - Кнопка "Open Folder" открывает проводник с файлом
 
-- ✅ **Исправлены все deprecated API warnings**
-  - Заменены все `withOpacity()` на `withValues(alpha:)`
-  - Заменен `activeColor` на `activeThumbColor`
-  - Исправлены `BuildContext` async gap warnings
-  - 0 warnings при `flutter analyze`
+- ✅ **Исправлена совместимость с Flutter 3.24**
+  - Обновлен compileSdk до 35 и ndkVersion до 27.0.12077973
+  - Исправлен DropdownButtonFormField (value → initialValue)
+  - Удален deprecated параметр activeColor из Switch
+  - Исправлены ошибки сборки в CI/CD
 
 ### 🔧 Улучшения
 - ✅ Windows версия не затронута - продолжает использовать xray.exe
