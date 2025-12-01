@@ -15,7 +15,9 @@ import java.io.InputStreamReader
 
 class VpnService : Service() {
     private var coreProcess: Process? = null
+    private var xrayHelper: XrayHelper? = null
     private var isRunning = false
+    private var useNativeLib = true // Use AndroidLibXrayLite by default
 
     companion object {
         const val CHANNEL_ID = "neotun_vpn_channel"
@@ -30,6 +32,7 @@ class VpnService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        xrayHelper = XrayHelper(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -57,6 +60,14 @@ class VpnService : Service() {
         }
 
         try {
+            // Check if this is Xray and use native library
+            if (useNativeLib && corePath.contains("xray", ignoreCase = true)) {
+                android.util.Log.d("VpnService", "Using AndroidLibXrayLite for Xray")
+                startXrayNative(configPath)
+                return
+            }
+            
+            // Fallback to process execution for other cores
             val coreFile = File(corePath)
             if (!coreFile.exists()) {
                 throw Exception("Core file not found: $corePath")
@@ -72,12 +83,10 @@ class VpnService : Service() {
                 android.util.Log.d("VpnService", "Copied to tmp: ${tmpCore.absolutePath}")
             } catch (e: Exception) {
                 android.util.Log.w("VpnService", "Failed to copy to tmp, using original path", e)
-                // Fallback to original path
                 Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
             }
             
             val execPath = if (tmpCore.exists()) tmpCore.absolutePath else corePath
-            android.util.Log.d("VpnService", "Using exec path: $execPath")
 
             // Build command
             val command = mutableListOf<String>()
@@ -131,8 +140,34 @@ class VpnService : Service() {
         }
     }
 
+    private fun startXrayNative(configPath: String) {
+        try {
+            val configFile = File(configPath)
+            if (!configFile.exists()) {
+                throw Exception("Config file not found: $configPath")
+            }
+            
+            val configContent = configFile.readText()
+            android.util.Log.d("VpnService", "Starting Xray with native library")
+            
+            val success = xrayHelper?.start(configContent) ?: false
+            if (success) {
+                isRunning = true
+                startForeground(NOTIFICATION_ID, createNotification("Proxy Connected"))
+            } else {
+                throw Exception("Failed to start Xray native library")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("VpnService", "Failed to start Xray native", e)
+            stopSelf()
+        }
+    }
+
     private fun stopCore() {
         try {
+            if (xrayHelper?.getRunning() == true) {
+                xrayHelper?.stop()
+            }
             coreProcess?.destroy()
             coreProcess?.waitFor()
             coreProcess = null

@@ -106,54 +106,26 @@ class TunVpnService : VpnService() {
             }
 
             val coreFile = File(corePath)
-            if (!coreFile.exists()) {
-                android.util.Log.e("TunVpnService", "Core file not found: $corePath")
-                return
-            }
-
-            android.util.Log.d("TunVpnService", "Core path: $corePath")
-            android.util.Log.d("TunVpnService", "Core size: ${coreFile.length()} bytes")
-            
-            // Set executable permissions
-            try {
-                Runtime.getRuntime().exec(arrayOf("chmod", "777", corePath)).waitFor()
-                android.util.Log.d("TunVpnService", "chmod 777 completed")
-            } catch (e: Exception) {
-                android.util.Log.w("TunVpnService", "chmod failed", e)
-            }
-            
             coreFile.setExecutable(true, false)
-            coreFile.setReadable(true, false)
 
-            // Build command for Runtime.exec
-            val command = mutableListOf<String>()
-            command.add("/system/bin/sh")
-            command.add("-c")
-            
-            val commandStr = buildString {
-                append("exec \"${coreFile.absolutePath}\"")
-                if (coreType == "singbox") {
-                    append(" run -c \"$configPath\"")
-                } else {
-                    append(" run -c \"$configPath\"")
-                }
+            // Для sing-box используем TUN режим
+            val args = if (coreType == "singbox") {
+                listOf(corePath, "run", "-c", configPath)
+            } else {
+                listOf(corePath, "run", "-c", configPath)
             }
-            command.add(commandStr)
-            
-            android.util.Log.d("TunVpnService", "Starting core: ${command.joinToString(" ")}")
 
-            // Build environment with TUN FD
-            val env = mutableListOf<String>()
-            env.add("LD_LIBRARY_PATH=${coreFile.parent}")
+            val processBuilder = ProcessBuilder(args)
+            processBuilder.redirectErrorStream(true)
+            
+            // Передаем file descriptor TUN интерфейса
             vpnInterface?.let { vpn ->
-                env.add("TUN_FD=${vpn.fd}")
+                processBuilder.environment()["TUN_FD"] = vpn.fd.toString()
             }
 
-            // Start process using Runtime.exec
-            val runtime = Runtime.getRuntime()
-            coreProcess = runtime.exec(command.toTypedArray(), env.toTypedArray(), coreFile.parentFile)
+            coreProcess = processBuilder.start()
 
-            // Monitor output
+            // Мониторинг вывода
             Thread {
                 try {
                     coreProcess?.inputStream?.bufferedReader()?.use { reader ->
