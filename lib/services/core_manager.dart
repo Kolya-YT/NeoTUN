@@ -344,12 +344,26 @@ class CoreManager {
       _logController.add('[TUN] Using TUN mode for sing-box');
     }
     
-    await configFile.writeAsString(jsonEncode(finalConfig));
+    try {
+      await configFile.writeAsString(jsonEncode(finalConfig));
+      _logController.add('[CONFIG] Config file written: ${configFile.path}');
+      _logController.add('[CONFIG] Config size: ${await configFile.length()} bytes');
+      
+      // Проверяем что файл действительно создан
+      if (!await configFile.exists()) {
+        throw Exception('Failed to create config file');
+      }
+    } catch (e) {
+      _logController.add('[ERROR] Failed to write config: $e');
+      throw Exception('Failed to write config file: $e');
+    }
     
     // Получаем порт из конфигурации
     final port = SystemProxy.instance.getInboundPort(finalConfig);
+    _logController.add('[PORT] Inbound port: ${port ?? 'not found'}');
     
     final args = _getStartArgs(config.coreType, configFile.path);
+    _logController.add('[ARGS] Command arguments: ${args.join(' ')}');
     
     try {
       // On Android, we need to run through shell with explicit permissions
@@ -374,9 +388,27 @@ class CoreManager {
       
       _logController.add('[START] Core ${config.coreType.displayName} started');
       _logController.add('[CONFIG] Using config: ${configFile.path}');
+      _logController.add('[COMMAND] $corePath ${args.join(' ')}');
       
-      // Ждем немного, чтобы процесс запустился
-      await Future.delayed(const Duration(seconds: 2));
+      // Проверяем что процесс не упал сразу
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Проверяем что процесс все еще работает
+      try {
+        final pid = _runningProcess!.pid;
+        _logController.add('[PID] Process ID: $pid');
+        
+        // Ждем еще немного для полной инициализации
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        // Проверяем что процесс не завершился
+        if (_runningProcess == null) {
+          throw Exception('Process terminated immediately after start');
+        }
+      } catch (e) {
+        _logController.add('[ERROR] Process check failed: $e');
+        throw Exception('Failed to start core: $e');
+      }
       
       // Включаем системный прокси только если не TUN режим
       if (!useTun && port != null) {
@@ -418,8 +450,19 @@ class CoreManager {
         SystemProxy.instance.disableProxy();
       });
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       _logController.add('[ERROR] Failed to start core: $e');
+      _logController.add('[STACK] ${stackTrace.toString().split('\n').take(5).join('\n')}');
+      
+      // Очищаем состояние
+      if (_runningProcess != null) {
+        try {
+          _runningProcess!.kill();
+        } catch (_) {}
+      }
+      _runningProcess = null;
+      _activeConfig = null;
+      
       rethrow;
     }
   }
