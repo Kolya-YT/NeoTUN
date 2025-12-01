@@ -105,7 +105,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[50],
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: Colors.white,
@@ -139,7 +139,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: const Color(0xFF1E293B),

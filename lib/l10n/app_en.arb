@@ -1,4 +1,5 @@
 {
+  "@@locale": "en",
   "appName": "NeoTUN",
   "home": "Home",
   "cores": "Cores",

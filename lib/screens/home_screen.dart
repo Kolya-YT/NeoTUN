@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../services/process_controller.dart';
-import '../services/traffic_stats.dart';
+
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
 import 'config_editor_screen.dart';

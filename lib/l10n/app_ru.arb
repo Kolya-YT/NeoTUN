@@ -1,4 +1,5 @@
 {
+  "@@locale": "ru",
   "appName": "NeoTUN",
   "home": "Главная",
   "cores": "Ядра",
