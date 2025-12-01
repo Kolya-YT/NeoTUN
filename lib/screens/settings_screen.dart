@@ -254,31 +254,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Navigator.pop(context);
 
       if (filePath != null) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Update Downloaded'),
-            content: Text(
-              Platform.isWindows
-                  ? 'Update downloaded to:\n$filePath\n\nPlease run the installer.'
-                  : 'Update downloaded. Install now?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Later'),
+        if (Platform.isWindows) {
+          // На Windows показываем инструкции и открываем папку
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Update Downloaded'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Update has been downloaded successfully!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('To install:'),
+                  const SizedBox(height: 8),
+                  const Text('1. Close this application'),
+                  const Text('2. Run the downloaded file'),
+                  const Text('3. Follow installation instructions'),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Location:\n$filePath',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
-              if (!Platform.isWindows)
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Later'),
+                ),
                 ElevatedButton(
                   onPressed: () async {
                     Navigator.pop(context);
-                    await UpdateService.instance.installUpdate(filePath);
+                    try {
+                      // Открываем проводник с выделенным файлом
+                      await Process.run('explorer', ['/select,', filePath], runInShell: true);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Could not open folder: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Open Folder'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // На Android показываем кнопку установки
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Update Downloaded'),
+              content: const Text('Update downloaded. Install now?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Later'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      await UpdateService.instance.installUpdate(filePath);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Installation failed: $e')),
+                        );
+                      }
+                    }
                   },
                   child: const Text('Install'),
                 ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;

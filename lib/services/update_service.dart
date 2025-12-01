@@ -89,9 +89,9 @@ class UpdateService {
         throw Exception('Failed to install APK: ${e.message}');
       }
     } else if (Platform.isWindows) {
-      // On Windows, launch installer
-      await Process.start(filePath, [], runInShell: true);
-      exit(0);
+      // На Windows не пытаемся запустить автоматически
+      // UI должен обработать это и показать инструкции пользователю
+      throw Exception('Windows updates must be installed manually');
     }
   }
 
