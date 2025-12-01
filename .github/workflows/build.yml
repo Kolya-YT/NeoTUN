@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       
+      - name: Generate localizations
+        run: flutter gen-l10n
+      
       - name: Build APK (split per ABI)
         run: flutter build apk --release --split-per-abi
       
@@ -55,8 +58,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          flutter-version: '3.24.0'
       - run: flutter pub get
+      - run: flutter gen-l10n
       - run: flutter build windows --release
       - run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath neotun-windows.zip
       - uses: actions/upload-artifact@v3
