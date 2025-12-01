@@ -141,7 +141,7 @@ flutter build apk --release --split-per-abi
 lib/
 ├── main.dart                 # Точка входа
 ├── models/                   # Модели данных
-│   ├── vpn_config.dart      # Конфигурация прокси
+│   ├── vpn_config.dart      # Модель конфигурации
 │   ├── core_type.dart       # Типы ядер
 │   └── core_manifest.dart   # Манифест ядер
 ├── screens/                  # Экраны приложения
