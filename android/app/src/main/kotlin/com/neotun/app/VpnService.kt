@@ -78,30 +78,31 @@ class VpnService : Service() {
             coreFile.setReadable(true, false)
             android.util.Log.d("VpnService", "Core executable: ${coreFile.canExecute()}")
 
-            // Build command string for sh -c
+            // Try to use /system/bin/sh directly with exec
+            val command = mutableListOf<String>()
+            command.add("/system/bin/sh")
+            command.add("-c")
+            
+            // Build command - use exec to replace shell process
             val commandStr = buildString {
-                append("cd \"${coreFile.parent}\" && ")
-                append("chmod 777 \"${coreFile.name}\" && ")
-                append("\"${coreFile.absolutePath}\"")
+                append("exec \"${coreFile.absolutePath}\"")
                 args.forEach { arg ->
                     append(" ")
-                    if (arg.contains(" ")) {
-                        append("\"$arg\"")
+                    if (arg.contains(" ") || arg.contains("\"")) {
+                        append("'$arg'")
                     } else {
                         append(arg)
                     }
                 }
                 append(" \"$configPath\"")
             }
+            command.add(commandStr)
             
-            android.util.Log.d("VpnService", "Starting core with sh -c: $commandStr")
+            android.util.Log.d("VpnService", "Starting core: ${command.joinToString(" ")}")
 
-            // Start process using sh -c to bypass SELinux restrictions
-            val processBuilder = ProcessBuilder("sh", "-c", commandStr)
-            val env = processBuilder.environment()
-            env["LD_LIBRARY_PATH"] = coreFile.parent
-            processBuilder.redirectErrorStream(true)
-            coreProcess = processBuilder.start()
+            // Start process using Runtime.exec for better compatibility
+            val runtime = Runtime.getRuntime()
+            coreProcess = runtime.exec(command.toTypedArray(), arrayOf("LD_LIBRARY_PATH=${coreFile.parent}"), coreFile.parentFile)
             isRunning = true
 
             // Start foreground service
