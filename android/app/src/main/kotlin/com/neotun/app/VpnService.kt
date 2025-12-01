@@ -57,44 +57,41 @@ class VpnService : Service() {
         }
 
         try {
-            // Make core executable
             val coreFile = File(corePath)
             if (!coreFile.exists()) {
                 throw Exception("Core file not found: $corePath")
             }
             
-            // Set executable permissions - multiple attempts
-            var chmodSuccess = false
+            // Copy core to cache dir with executable permissions
+            val cacheDir = applicationContext.cacheDir
+            val executableCore = File(cacheDir, coreFile.name)
+            
+            android.util.Log.d("VpnService", "Copying core from $corePath to ${executableCore.absolutePath}")
+            coreFile.copyTo(executableCore, overwrite = true)
+            
+            // Set executable permissions on the copy
             try {
-                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath))
-                chmodSuccess = chmodProcess.waitFor() == 0
-                android.util.Log.d("VpnService", "chmod result: $chmodSuccess")
+                val chmodProcess = Runtime.getRuntime().exec(arrayOf("chmod", "755", executableCore.absolutePath))
+                val chmodResult = chmodProcess.waitFor()
+                android.util.Log.d("VpnService", "chmod result: $chmodResult")
             } catch (e: Exception) {
-                android.util.Log.w("VpnService", "chmod failed", e)
+                android.util.Log.w("VpnService", "chmod failed, trying setExecutable", e)
             }
             
-            if (!chmodSuccess) {
-                try {
-                    coreFile.setExecutable(true, false)
-                    android.util.Log.d("VpnService", "setExecutable called")
-                } catch (e: Exception) {
-                    android.util.Log.w("VpnService", "setExecutable failed", e)
-                }
-            }
+            executableCore.setExecutable(true, false)
+            android.util.Log.d("VpnService", "Core executable: ${executableCore.canExecute()}")
 
-            // Build command - use absolute path with sh
-            val commandStr = buildString {
-                append("cd ${coreFile.parent} && ")
-                append("./${coreFile.name}")
-                args.forEach { append(" \"$it\"") }
-                append(" \"$configPath\"")
-            }
+            // Build command list
+            val command = mutableListOf<String>()
+            command.add(executableCore.absolutePath)
+            command.addAll(args)
+            command.add(configPath)
             
-            android.util.Log.d("VpnService", "Starting core with command: $commandStr")
-            android.util.Log.d("VpnService", "Core file permissions: ${coreFile.canExecute()}")
+            android.util.Log.d("VpnService", "Starting core with command: ${command.joinToString(" ")}")
 
-            // Start process using sh -c
-            val processBuilder = ProcessBuilder("sh", "-c", commandStr)
+            // Start process directly without sh -c
+            val processBuilder = ProcessBuilder(command)
+            processBuilder.directory(cacheDir)
             processBuilder.redirectErrorStream(true)
             coreProcess = processBuilder.start()
             isRunning = true
