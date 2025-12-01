@@ -63,46 +63,37 @@ class VpnService : Service() {
             }
             
             android.util.Log.d("VpnService", "Core path: $corePath")
-            android.util.Log.d("VpnService", "Core exists: ${coreFile.exists()}")
-            android.util.Log.d("VpnService", "Core size: ${coreFile.length()} bytes")
             
-            // Set executable permissions - try multiple methods
+            // Copy to /data/local/tmp which usually has exec permissions
+            val tmpCore = File("/data/local/tmp/${coreFile.name}")
             try {
-                Runtime.getRuntime().exec(arrayOf("chmod", "777", corePath)).waitFor()
-                android.util.Log.d("VpnService", "chmod 777 completed")
+                coreFile.copyTo(tmpCore, overwrite = true)
+                Runtime.getRuntime().exec(arrayOf("chmod", "755", tmpCore.absolutePath)).waitFor()
+                android.util.Log.d("VpnService", "Copied to tmp: ${tmpCore.absolutePath}")
             } catch (e: Exception) {
-                android.util.Log.w("VpnService", "chmod 777 failed", e)
+                android.util.Log.w("VpnService", "Failed to copy to tmp, using original path", e)
+                // Fallback to original path
+                Runtime.getRuntime().exec(arrayOf("chmod", "755", corePath)).waitFor()
             }
             
-            coreFile.setExecutable(true, false)
-            coreFile.setReadable(true, false)
-            android.util.Log.d("VpnService", "Core executable: ${coreFile.canExecute()}")
+            val execPath = if (tmpCore.exists()) tmpCore.absolutePath else corePath
+            android.util.Log.d("VpnService", "Using exec path: $execPath")
 
-            // Try to use /system/bin/sh directly with exec
+            // Build command
             val command = mutableListOf<String>()
-            command.add("/system/bin/sh")
-            command.add("-c")
+            command.add(execPath)
+            command.addAll(args)
+            command.add(configPath)
             
-            // Build command - use exec to replace shell process
-            val commandStr = buildString {
-                append("exec \"${coreFile.absolutePath}\"")
-                args.forEach { arg ->
-                    append(" ")
-                    if (arg.contains(" ") || arg.contains("\"")) {
-                        append("'$arg'")
-                    } else {
-                        append(arg)
-                    }
-                }
-                append(" \"$configPath\"")
-            }
-            command.add(commandStr)
-            
-            android.util.Log.d("VpnService", "Starting core: ${command.joinToString(" ")}")
+            android.util.Log.d("VpnService", "Starting: ${command.joinToString(" ")}")
 
-            // Start process using Runtime.exec for better compatibility
+            // Start process
             val runtime = Runtime.getRuntime()
-            coreProcess = runtime.exec(command.toTypedArray(), arrayOf("LD_LIBRARY_PATH=${coreFile.parent}"), coreFile.parentFile)
+            coreProcess = runtime.exec(
+                command.toTypedArray(),
+                arrayOf("PATH=/system/bin:/system/xbin"),
+                File(execPath).parentFile
+            )
             isRunning = true
 
             // Start foreground service
