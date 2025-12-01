@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - 'v*-beta.*'
   workflow_dispatch:
 
 env:
@@ -174,7 +175,7 @@ jobs:
         with:
           files: final-release/*
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref, 'beta') }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
