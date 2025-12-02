@@ -115,20 +115,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               ListTile(
-                title: const Text('Import Subscription'),
+                title: Text(AppLocalizations.of(context)!.subscription),
                 subtitle: const Text('Import from URL or vless:// link'),
                 trailing: const Icon(Icons.link),
                 onTap: _importSubscription,
               ),
               ListTile(
-                title: const Text('Import Config'),
-                subtitle: const Text('Import from JSON file'),
+                title: Text(AppLocalizations.of(context)!.importConfig),
+                subtitle: Text(AppLocalizations.of(context)!.importFromFile),
                 trailing: const Icon(Icons.file_upload),
                 onTap: _importConfig,
               ),
               ListTile(
-                title: const Text('Export All Configs'),
-                subtitle: const Text('Export to directory'),
+                title: Text(AppLocalizations.of(context)!.exportConfig),
+                subtitle: Text(AppLocalizations.of(context)!.exportToFile),
                 trailing: const Icon(Icons.file_download),
                 onTap: _exportConfigs,
               ),
@@ -139,14 +139,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             children: [
-              const ListTile(
+              ListTile(
                 title: Text(
-                  'Advanced',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  AppLocalizations.of(context)!.advanced,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               ListTile(
-                title: const Text('Cores Directory'),
+                title: Text(AppLocalizations.of(context)!.dataDirectory),
                 subtitle: Text(CoreManager.instance.coreDirectory.path),
                 trailing: const Icon(Icons.folder),
                 onTap: () {
@@ -154,8 +154,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               ListTile(
-                title: const Text('Clear Cache'),
-                subtitle: const Text('Remove temporary files'),
+                title: Text(AppLocalizations.of(context)!.clearCache),
+                subtitle: Text(AppLocalizations.of(context)!.clearCacheDescription),
                 trailing: const Icon(Icons.delete_sweep),
                 onTap: _clearCache,
               ),
@@ -165,8 +165,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
-            title: const Text('About'),
-            subtitle: Text('NeoTUN v$_appVersion${_appVersion.contains('beta') ? ' (Beta)' : ''}\nCross-platform VPN client\nSupports Xray, sing-box, Hysteria2'),
+            title: Text(AppLocalizations.of(context)!.about),
+            subtitle: Text('${AppLocalizations.of(context)!.appName} v$_appVersion${_appVersion.contains('beta') ? ' (Beta)' : ''}\nCross-platform VPN client\nSupports ${AppLocalizations.of(context)!.xray}, ${AppLocalizations.of(context)!.singbox}, ${AppLocalizations.of(context)!.hysteria2}'),
             trailing: const Icon(Icons.info),
           ),
         ),
@@ -196,21 +196,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Update Available'),
+              title: Text(AppLocalizations.of(context)!.updateAvailable),
               content: Text(
                 'New version ${manifest.latestVersion} is available!\n\n${manifest.notes}',
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Later'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
                     _downloadUpdate();
                   },
-                  child: const Text('Download'),
+                  child: Text(AppLocalizations.of(context)!.downloadUpdate),
                 ),
               ],
             ),
@@ -219,12 +219,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Up to Date'),
-              content: const Text('You are running the latest version.'),
+              title: Text(AppLocalizations.of(context)!.upToDate),
+              content: Text(AppLocalizations.of(context)!.noUpdateAvailable),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
+                  child: Text(AppLocalizations.of(context)!.ok),
                 ),
               ],
             ),
@@ -245,14 +245,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        title: Text('Downloading Update'),
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.downloadUpdate),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Please wait...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(AppLocalizations.of(context)!.loading),
           ],
         ),
       ),
@@ -366,7 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Import Subscription'),
+        title: Text(AppLocalizations.of(context)!.subscription),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -400,11 +400,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Import'),
+            child: Text(AppLocalizations.of(context)!.importConfig),
           ),
         ],
       ),
@@ -535,16 +535,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('This will remove all temporary files. Continue?'),
+        title: Text(AppLocalizations.of(context)!.clearCache),
+        content: Text(AppLocalizations.of(context)!.clearCacheDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),
@@ -564,24 +564,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Theme'),
+        title: Text(AppLocalizations.of(context)!.selectTheme),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('System'),
+              title: Text(AppLocalizations.of(context)!.system),
               value: 'system',
               groupValue: _themeMode,
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
-              title: const Text('Light'),
+              title: Text(AppLocalizations.of(context)!.light),
               value: 'light',
               groupValue: _themeMode,
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
-              title: const Text('Dark'),
+              title: Text(AppLocalizations.of(context)!.dark),
               value: 'dark',
               groupValue: _themeMode,
               onChanged: (value) => Navigator.pop(context, value),
@@ -609,18 +609,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Language'),
+        title: Text(AppLocalizations.of(context)!.selectLanguage),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('English'),
+              title: Text(AppLocalizations.of(context)!.english),
               value: 'en',
               groupValue: _language,
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
-              title: const Text('Русский'),
+              title: Text(AppLocalizations.of(context)!.russian),
               value: 'ru',
               groupValue: _language,
               onChanged: (value) => Navigator.pop(context, value),
