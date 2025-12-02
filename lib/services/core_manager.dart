@@ -22,26 +22,47 @@ class CoreManager {
   Stream<String> get logStream => _logController.stream;
 
   Future<void> init() async {
+    print('[CoreManager] Initializing...');
     try {
       if (Platform.isAndroid) {
+        print('[CoreManager] Platform: Android');
         final appDir = await getApplicationSupportDirectory();
+        print('[CoreManager] App dir: ${appDir.path}');
         _coreDir = Directory('${appDir.path}/cores');
       } else {
+        print('[CoreManager] Platform: ${Platform.operatingSystem}');
         final currentDir = Directory.current;
+        print('[CoreManager] Current dir: ${currentDir.path}');
         _coreDir = Directory('${currentDir.path}/cores');
       }
       
+      print('[CoreManager] Cores directory: ${_coreDir.path}');
+      
       if (!await _coreDir.exists()) {
+        print('[CoreManager] Creating cores directory...');
         await _coreDir.create(recursive: true);
+        print('[CoreManager] ✓ Cores directory created');
+      } else {
+        print('[CoreManager] ✓ Cores directory exists');
       }
       
-      _log('Cores directory: ${_coreDir.path}');
-    } catch (e) {
+      _log('✓ CoreManager initialized: ${_coreDir.path}');
+    } catch (e, stack) {
+      print('[CoreManager] ERROR: $e');
+      print('[CoreManager] Stack: $stack');
       _log('Failed to initialize cores directory: $e');
-      final tempDir = await getTemporaryDirectory();
-      _coreDir = Directory('${tempDir.path}/cores');
-      if (!await _coreDir.exists()) {
-        await _coreDir.create(recursive: true);
+      
+      try {
+        final tempDir = await getTemporaryDirectory();
+        print('[CoreManager] Using temp directory: ${tempDir.path}');
+        _coreDir = Directory('${tempDir.path}/cores');
+        if (!await _coreDir.exists()) {
+          await _coreDir.create(recursive: true);
+        }
+        print('[CoreManager] ✓ Fallback directory created');
+      } catch (e2) {
+        print('[CoreManager] FATAL: Cannot create fallback directory: $e2');
+        rethrow;
       }
     }
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,36 +12,80 @@ import 'services/traffic_stats.dart';
 import 'services/auto_reconnect.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-    print('Initializing CoreManager...');
-    await CoreManager.instance.init();
-    print('CoreManager initialized');
+  // Глобальный обработчик ошибок
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print('═══════════════════════════════════════');
+    print('FLUTTER ERROR:');
+    print('${details.exception}');
+    print('${details.stack}');
+    print('═══════════════════════════════════════');
+  };
+
+  // Обработчик необработанных асинхронных ошибок
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
     
-    print('Initializing ConfigStorage...');
-    await ConfigStorage.instance.init();
-    print('ConfigStorage initialized');
+    print('═══════════════════════════════════════');
+    print('NeoTUN Starting...');
+    print('═══════════════════════════════════════');
     
-    print('Initializing UpdateService...');
-    await UpdateService.instance.init();
-    print('UpdateService initialized');
+    try {
+      print('[INIT] Initializing CoreManager...');
+      await CoreManager.instance.init();
+      print('[INIT] ✓ CoreManager initialized');
+    } catch (e, stackTrace) {
+      print('[INIT] ✗ CoreManager error: $e');
+      print('[INIT] Stack: $stackTrace');
+    }
     
-    print('Initializing TrafficStats...');
-    await TrafficStats.instance.init();
-    print('TrafficStats initialized');
+    try {
+      print('[INIT] Initializing ConfigStorage...');
+      await ConfigStorage.instance.init();
+      print('[INIT] ✓ ConfigStorage initialized');
+    } catch (e, stackTrace) {
+      print('[INIT] ✗ ConfigStorage error: $e');
+      print('[INIT] Stack: $stackTrace');
+    }
     
-    print('Initializing AutoReconnect...');
-    await AutoReconnect.instance.init();
-    print('AutoReconnect initialized');
-  } catch (e, stackTrace) {
-    print('Initialization error: $e');
-    print('Stack trace: $stackTrace');
-    // Продолжаем работу даже при ошибке инициализации
-  }
-  
-  print('Starting app...');
-  runApp(const NeoTunApp());
+    try {
+      print('[INIT] Initializing UpdateService...');
+      await UpdateService.instance.init();
+      print('[INIT] ✓ UpdateService initialized');
+    } catch (e, stackTrace) {
+      print('[INIT] ✗ UpdateService error: $e');
+      print('[INIT] Stack: $stackTrace');
+    }
+    
+    try {
+      print('[INIT] Initializing TrafficStats...');
+      await TrafficStats.instance.init();
+      print('[INIT] ✓ TrafficStats initialized');
+    } catch (e, stackTrace) {
+      print('[INIT] ✗ TrafficStats error: $e');
+      print('[INIT] Stack: $stackTrace');
+    }
+    
+    try {
+      print('[INIT] Initializing AutoReconnect...');
+      await AutoReconnect.instance.init();
+      print('[INIT] ✓ AutoReconnect initialized');
+    } catch (e, stackTrace) {
+      print('[INIT] ✗ AutoReconnect error: $e');
+      print('[INIT] Stack: $stackTrace');
+    }
+    
+    print('═══════════════════════════════════════');
+    print('[APP] Starting NeoTUN App...');
+    print('═══════════════════════════════════════');
+    
+    runApp(const NeoTunApp());
+  }, (error, stack) {
+    print('═══════════════════════════════════════');
+    print('UNHANDLED ERROR:');
+    print('$error');
+    print('$stack');
+    print('═══════════════════════════════════════');
+  });
 }
 
 class NeoTunApp extends StatefulWidget {
