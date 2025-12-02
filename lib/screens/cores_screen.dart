@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../models/core_type.dart';
-import '../services/core_manager.dart';
 import '../services/xray_downloader.dart';
 import '../services/libxray_downloader.dart';
 
