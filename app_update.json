@@ -1,26 +1,14 @@
 {
-  "latest_version": "1.2.0",
-  "latest_beta_version": "1.2.2-beta.5",
-  "notes": "Stable release 1.2.0",
-  "beta_notes": "Beta 1.2.2-beta.5: Automatic download of xray-core and libxray, auto-update checks, fixed Android build",
+  "latest_version": "1.2.2-beta.13",
+  "notes": "Release 1.2.2-beta.13",
   "platforms": {
     "windows-x64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.0/NeoTUN-Windows-x64.zip",
-      "sha256": "a9e2611255ac5d8399f907ca9a5b7fe27cdf8034eaf7935e8047b8506e3b8d3b"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.13/NeoTUN-Windows-x64.zip",
+      "sha256": "b1ffb4d133990c0928acac8a2d57c5efd4d4f6d303162547f1147566366aff24"
     },
     "android-arm64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.0/app-arm64-v8a-release.apk",
-      "sha256": "e51136893e427f712fb59d4cf69d41881ecb0041ee881efe6b07cad6ed4c0a12"
-    }
-  },
-  "beta_platforms": {
-    "windows-x64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.5/NeoTUN-Windows-x64.zip",
-      "sha256": ""
-    },
-    "android-arm64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.5/app-arm64-v8a-release.apk",
-      "sha256": ""
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.13/app-arm64-v8a-release.apk",
+      "sha256": "c81dd1c48ff66bba9133a7be6c7380d7de0443bb96af2c3a60bba33f6f15900a"
     }
   }
 }
