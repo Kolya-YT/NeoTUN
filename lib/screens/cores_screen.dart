@@ -287,47 +287,4 @@ class _CoresScreenState extends State<CoresScreen> {
       );
     }
   }
-
-  Future<void> _rollbackCoreOld(CoreType core) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rollback Core'),
-        content: Text('Rollback ${core.displayName} to previous version?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Rollback'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    setState(() => _loading = true);
-    
-    try {
-      // Rollback removed
-      await _checkCores();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${core.displayName} rolled back successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Rollback failed: $e')),
-        );
-      }
-    } finally {
-      setState(() => _loading = false);
-    }
-  }
 }

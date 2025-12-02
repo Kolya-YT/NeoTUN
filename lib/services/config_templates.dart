@@ -264,23 +264,6 @@ class ConfigTemplates {
           extra: extra,
         );
       
-      case CoreType.singbox:
-        return getSingboxTemplate(
-          protocol: protocol,
-          address: address,
-          port: port,
-          id: id,
-          password: password,
-          extra: extra,
-        );
-      
-      case CoreType.hysteria2:
-        return getHysteria2Template(
-          address: address,
-          port: port,
-          password: password ?? id ?? "",
-          extra: extra,
-        );
     }
   }
 }

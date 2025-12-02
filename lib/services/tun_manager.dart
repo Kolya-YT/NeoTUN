@@ -91,16 +91,15 @@ class TunManager {
         return false;
       }
 
-      // sing-box имеет встроенную поддержку TUN
-      if (coreType == CoreType.singbox) {
+      // Xray с Wintun драйвером
+      if (coreType == CoreType.xray) {
         _isTunEnabled = true;
         _currentMode = TunMode.tun;
-        print('✓ Windows TUN enabled (sing-box)');
+        print('✓ Windows TUN enabled (Xray with Wintun)');
         return true;
       }
 
-      // Для XRay нужна дополнительная настройка
-      print('⚠ TUN mode for XRay on Windows requires additional setup');
+      print('⚠ TUN mode requires Wintun driver');
       return false;
       
     } catch (e) {

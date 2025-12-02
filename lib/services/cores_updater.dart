@@ -13,18 +13,8 @@ class CoresUpdater {
   static const hysteria2ReleaseUrl = 'https://api.github.com/repos/apernet/hysteria/releases/latest';
 
   Future<Map<String, dynamic>?> getLatestRelease(CoreType coreType) async {
-    String url;
-    switch (coreType) {
-      case CoreType.xray:
-        url = xrayReleaseUrl;
-        break;
-      case CoreType.singbox:
-        url = singboxReleaseUrl;
-        break;
-      case CoreType.hysteria2:
-        url = hysteria2ReleaseUrl;
-        break;
-    }
+    // Only Xray now
+    final url = xrayReleaseUrl;
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -45,29 +35,9 @@ class CoresUpdater {
 
     String pattern;
     if (Platform.isWindows) {
-      switch (coreType) {
-        case CoreType.xray:
-          pattern = 'windows-64.zip';
-          break;
-        case CoreType.singbox:
-          pattern = 'windows-amd64.zip';
-          break;
-        case CoreType.hysteria2:
-          pattern = 'windows-amd64.exe';
-          break;
-      }
+      pattern = 'windows-64.zip';
     } else if (Platform.isAndroid) {
-      switch (coreType) {
-        case CoreType.xray:
-          pattern = 'android-arm64-v8a.zip';
-          break;
-        case CoreType.singbox:
-          pattern = 'android-arm64.zip';
-          break;
-        case CoreType.hysteria2:
-          pattern = 'android-arm64';
-          break;
-      }
+      pattern = 'android-arm64-v8a.zip';
     } else {
       return null;
     }
