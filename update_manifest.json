@@ -1,7 +1,7 @@
 {
-  "version": "1.2.1-beta.2",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.2/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.1-beta.2: Clipboard import, connection testing for all configs, speed test improvements, localization fixes",
+  "version": "1.2.1-beta.3",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.3/NeoTUN-Windows-x64.zip",
+  "changelog": "Beta 1.2.1-beta.3: Fixed TUN mode routing issues, improved DNS configuration, better Android VPN stability",
   "cores": {
     "xray": {
       "version": "1.8.7",

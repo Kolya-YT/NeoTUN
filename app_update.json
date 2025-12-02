@@ -1,8 +1,8 @@
 {
   "latest_version": "1.2.0",
-  "latest_beta_version": "1.2.1-beta.2",
+  "latest_beta_version": "1.2.1-beta.3",
   "notes": "Stable release 1.2.0",
-  "beta_notes": "Beta 1.2.1-beta.2: Clipboard import, connection testing for all configs, speed test improvements, localization fixes",
+  "beta_notes": "Beta 1.2.1-beta.3: Fixed TUN mode routing issues, improved DNS configuration, better Android VPN stability",
   "platforms": {
     "windows-x64": {
       "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.0/NeoTUN-Windows-x64.zip",
@@ -15,11 +15,11 @@
   },
   "beta_platforms": {
     "windows-x64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.2/NeoTUN-Windows-x64.zip",
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.3/NeoTUN-Windows-x64.zip",
       "sha256": ""
     },
     "android-arm64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.2/app-arm64-v8a-release.apk",
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.3/app-arm64-v8a-release.apk",
       "sha256": ""
     }
   }

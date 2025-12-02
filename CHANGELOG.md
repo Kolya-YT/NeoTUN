@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.2.1-beta.3] - 2024-12-02
+
+### Fixed
+- **TUN Mode Routing**: Fixed routing issues causing "connected but no internet"
+  - Removed app exclusion from VPN that was breaking routing
+  - Improved DNS configuration with multiple fallback servers
+  - Fixed MTU size (1500 instead of 9000 for better compatibility)
+  - Enhanced Xray TUN config with proper outbound tagging
+  - Added private IP range exclusions for local network access
+
+### Improved
+- **DNS Configuration**: Better DNS server setup
+  - Added Cloudflare DNS (1.1.1.1) as fallback
+  - Proper DNS query strategy (UseIPv4)
+  - Multiple DNS servers for redundancy
+- **Logging**: Enhanced debug logging for TUN mode troubleshooting
+- **Stability**: Better error handling in VPN service
+
+### Technical
+- Updated version to 1.2.1-beta.3+16
+- Improved TunManager configuration generation
+- Better outbound preservation from base config
+- Enhanced sniffing configuration for Xray
+
 ## [1.2.1-beta.2] - 2024-12-02
 
 ### Added

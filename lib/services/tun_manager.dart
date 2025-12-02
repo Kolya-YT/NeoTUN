@@ -205,6 +205,9 @@ class TunManager {
     
     print('[TUN] Creating Xray TUN config (dokodemo-door mode)');
     
+    // Сохраняем оригинальные outbounds из базовой конфигурации
+    final originalOutbounds = config['outbounds'] as List<dynamic>?;
+    
     // Для Xray используем dokodemo-door для перехвата трафика
     // Это работает с нативной библиотекой AndroidLibXrayLite
     config['inbounds'] = [
@@ -218,29 +221,72 @@ class TunManager {
         },
         'sniffing': {
           'enabled': true,
-          'destOverride': ['http', 'tls'],
+          'destOverride': ['http', 'tls', 'quic'],
+          'routeOnly': false,
         },
       }
     ];
     
-    // Настраиваем DNS
+    // Настраиваем DNS с правильными серверами
     config['dns'] = {
       'servers': [
-        '8.8.8.8',
-        '8.8.4.4',
-        'localhost',
+        {
+          'address': '8.8.8.8',
+          'port': 53,
+          'domains': [],
+        },
+        {
+          'address': '8.8.4.4',
+          'port': 53,
+          'domains': [],
+        },
+        {
+          'address': '1.1.1.1',
+          'port': 53,
+          'domains': [],
+        },
       ],
+      'queryStrategy': 'UseIPv4',
     };
     
-    // Настраиваем routing для TUN
+    // Убеждаемся что outbounds правильно настроены
+    if (originalOutbounds != null && originalOutbounds.isNotEmpty) {
+      // Используем оригинальные outbounds
+      config['outbounds'] = originalOutbounds;
+      
+      // Убеждаемся что есть proxy outbound с правильным тегом
+      bool hasProxy = false;
+      for (final outbound in originalOutbounds) {
+        if (outbound is Map && outbound['tag'] == 'proxy') {
+          hasProxy = true;
+          break;
+        }
+      }
+      
+      // Если нет proxy тега, добавляем его к первому outbound
+      if (!hasProxy && originalOutbounds.isNotEmpty) {
+        final firstOutbound = originalOutbounds[0] as Map<String, dynamic>;
+        firstOutbound['tag'] = 'proxy';
+      }
+    }
+    
+    // Настраиваем routing для TUN с правильной маршрутизацией
     config['routing'] = {
       'domainStrategy': 'IPIfNonMatch',
       'rules': [
+        // Локальные адреса идут напрямую
         {
           'type': 'field',
-          'ip': ['geoip:private'],
+          'ip': [
+            'geoip:private',
+            '127.0.0.0/8',
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+          ],
           'outboundTag': 'direct',
         },
+        // Весь остальной трафик через прокси
         {
           'type': 'field',
           'inboundTag': ['tun-in'],
@@ -249,7 +295,7 @@ class TunManager {
       ],
     };
     
-    print('[TUN] Xray TUN config created');
+    print('[TUN] Xray TUN config created with ${config['outbounds']?.length ?? 0} outbounds');
     return config;
   }
 
