@@ -1,5 +1,5 @@
 name: neotun
-description: Cross-platform proxy client with Xray, sing-box, hysteria2 support
+description: Cross-platform VPN client powered by Xray-core
 publish_to: 'none'
 version: 1.2.2-beta.1+17
 

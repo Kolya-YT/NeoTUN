@@ -10,6 +10,7 @@ import 'download_service.dart';
 import 'xray_service.dart';
 import 'system_proxy.dart';
 import 'traffic_stats.dart';
+import 'tun_manager.dart';
 
 class CoreManager {
   static final CoreManager instance = CoreManager._();
@@ -189,20 +190,56 @@ class CoreManager {
     try {
       _log('Starting Xray...');
       
-      // Запускаем через XrayService
-      await XrayService.instance.start(config);
+      // На Android принудительно используем TUN
+      if (Platform.isAndroid) {
+        useTun = true;
+        _log('[ANDROID] Forcing TUN mode');
+      }
+      
+      // Если TUN режим - используем TunManager
+      if (useTun) {
+        _log('[TUN] Starting in TUN mode');
+        
+        // Создаём временный конфиг файл
+        final tempDir = await getTemporaryDirectory();
+        final configFile = File('${tempDir.path}/xray_tun_config.json');
+        
+        // Модифицируем конфиг для TUN
+        final tunConfig = TunManager.instance.createXrayTunConfig(
+          baseConfig: config.config,
+        );
+        
+        await configFile.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(tunConfig),
+        );
+        
+        // Запускаем через TunManager
+        final success = await TunManager.instance.enableTun(
+          coreType: CoreType.xray,
+          configPath: configFile.path,
+        );
+        
+        if (!success) {
+          throw Exception('Failed to start TUN mode');
+        }
+        
+        _log('[TUN] ✓ TUN mode started');
+      } else {
+        // Proxy режим - запускаем через XrayService
+        await XrayService.instance.start(config);
+        
+        // Включаем системный прокси
+        final port = 10808; // SOCKS порт
+        final proxyEnabled = await SystemProxy.instance.enableProxy('127.0.0.1', port);
+        if (proxyEnabled) {
+          _log('✓ System proxy enabled: 127.0.0.1:$port');
+        } else {
+          _log('⚠ Failed to enable system proxy');
+        }
+      }
       
       // Start traffic statistics
       TrafficStats.instance.startSession();
-      
-      // Включаем системный прокси
-      final port = 10808; // SOCKS порт
-      final proxyEnabled = await SystemProxy.instance.enableProxy('127.0.0.1', port);
-      if (proxyEnabled) {
-        _log('✓ System proxy enabled: 127.0.0.1:$port');
-      } else {
-        _log('⚠ Failed to enable system proxy');
-      }
       
       _log('✓ Xray started successfully');
     } catch (e) {
@@ -214,15 +251,25 @@ class CoreManager {
   Future<void> stopCore() async {
     _log('Stopping Xray...');
     
+    // Останавливаем TUN если активен
+    if (TunManager.instance.isTunEnabled) {
+      await TunManager.instance.disableTun();
+      _log('[TUN] ✓ TUN mode disabled');
+    }
+    
+    // Останавливаем XrayService
     await XrayService.instance.stop();
+    
+    // Отключаем системный прокси
     await SystemProxy.instance.disableProxy();
     
+    // Останавливаем статистику
     TrafficStats.instance.stopSession();
     
     _log('✓ Xray stopped');
   }
 
-  bool get isRunning => XrayService.instance.isRunning;
+  bool get isRunning => XrayService.instance.isRunning || TunManager.instance.isTunEnabled;
   VpnConfig? get activeConfig => XrayService.instance.activeConfig;
   Directory get coreDirectory => _coreDir;
 
