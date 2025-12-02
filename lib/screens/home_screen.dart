@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../l10n/app_localizations.dart';
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../services/process_controller.dart';
@@ -158,21 +159,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           selectedIndex: _selectedIndex,
           onDestinationSelected: (index) => setState(() => _selectedIndex = index),
           height: 70,
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: AppLocalizations.of(context)!.home,
             ),
             NavigationDestination(
-              icon: Icon(Icons.dns_outlined),
-              selectedIcon: Icon(Icons.dns),
-              label: 'Cores',
+              icon: const Icon(Icons.dns_outlined),
+              selectedIcon: const Icon(Icons.dns),
+              label: AppLocalizations.of(context)!.cores,
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: AppLocalizations.of(context)!.settings,
             ),
           ],
         ),
@@ -328,7 +329,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      _useTunMode ? 'TUN Mode' : 'Proxy Mode',
+                                      _useTunMode ? AppLocalizations.of(context)!.tunMode : AppLocalizations.of(context)!.proxyMode,
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -369,7 +370,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      isRunning ? 'Connected' : 'Disconnected',
+                                      isRunning ? AppLocalizations.of(context)!.connected : AppLocalizations.of(context)!.disconnected,
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 24,
@@ -414,7 +415,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              'Stop',
+                                              AppLocalizations.of(context)!.stop,
                                               style: TextStyle(
                                                 color: Colors.red.shade400,
                                                 fontWeight: FontWeight.bold,
@@ -481,7 +482,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No configurations',
+                        AppLocalizations.of(context)!.noConfigurations,
                         style: TextStyle(
                           fontSize: 20,
                           color: Colors.grey.shade600,
@@ -490,7 +491,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tap + to add a new config',
+                        AppLocalizations.of(context)!.tapToAddConfig,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -615,7 +616,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                   Icon(Icons.circle, size: 8, color: Colors.white),
                                   SizedBox(width: 4),
                                   Text(
-                                    'Active',
+                                    AppLocalizations.of(context)!.active,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white,
@@ -707,17 +708,17 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Configuration'),
-        content: const Text('Are you sure you want to delete this configuration?'),
+        title: Text(AppLocalizations.of(context)!.deleteConfig),
+        content: Text(AppLocalizations.of(context)!.deleteConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),

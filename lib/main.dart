@@ -85,7 +85,6 @@ class _NeoTunAppState extends State<NeoTunApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      key: ValueKey(_locale.languageCode),
       title: 'NeoTUN',
       themeMode: _themeMode,
       locale: _locale,
@@ -99,6 +98,16 @@ class _NeoTunAppState extends State<NeoTunApp> {
         Locale('en'),
         Locale('ru'),
       ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        // Если выбранная локаль поддерживается, используем её
+        for (var supportedLocale in supportedLocales) {
+          if (supportedLocale.languageCode == _locale.languageCode) {
+            return _locale;
+          }
+        }
+        // Иначе возвращаем первую поддерживаемую
+        return supportedLocales.first;
+      },
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6366F1),
