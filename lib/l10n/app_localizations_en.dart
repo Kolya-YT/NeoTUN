@@ -171,4 +171,348 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coreNotInstalled => 'Core not installed';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get network => 'Network';
+
+  @override
+  String get advanced => 'Advanced';
+
+  @override
+  String get autoUpdate => 'Auto Update';
+
+  @override
+  String get autoUpdateDescription =>
+      'Automatically check for updates on startup';
+
+  @override
+  String get clearCache => 'Clear Cache';
+
+  @override
+  String get clearCacheDescription => 'Clear application cache';
+
+  @override
+  String get dataDirectory => 'Data Directory';
+
+  @override
+  String get openDataDirectory => 'Open Data Directory';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get russian => 'Русский';
+
+  @override
+  String get systemDefault => 'System Default';
+
+  @override
+  String get light => 'Light';
+
+  @override
+  String get dark => 'Dark';
+
+  @override
+  String get system => 'System';
+
+  @override
+  String get appearance => 'Appearance';
+
+  @override
+  String get selectTheme => 'Select Theme';
+
+  @override
+  String get selectLanguage => 'Select Language';
+
+  @override
+  String get appInfo => 'App Info';
+
+  @override
+  String get checkingForUpdates => 'Checking for updates...';
+
+  @override
+  String get upToDate => 'You\'re up to date!';
+
+  @override
+  String get updateAvailable => 'Update available';
+
+  @override
+  String get downloadUpdate => 'Download Update';
+
+  @override
+  String get noUpdateAvailable => 'No updates available';
+
+  @override
+  String get enterConfigName => 'Enter configuration name';
+
+  @override
+  String get enterJsonConfig => 'Enter JSON configuration';
+
+  @override
+  String get invalidJson => 'Invalid JSON format';
+
+  @override
+  String get configSaved => 'Configuration saved';
+
+  @override
+  String get configDeleted => 'Configuration deleted';
+
+  @override
+  String get pasteFromClipboard => 'Paste from Clipboard';
+
+  @override
+  String get copyToClipboard => 'Copy to Clipboard';
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get scanQrCode => 'Scan QR Code';
+
+  @override
+  String get importFromFile => 'Import from File';
+
+  @override
+  String get exportToFile => 'Export to File';
+
+  @override
+  String get shareConfig => 'Share Configuration';
+
+  @override
+  String get duplicateConfig => 'Duplicate Configuration';
+
+  @override
+  String get renameConfig => 'Rename Configuration';
+
+  @override
+  String get testConnection => 'Test Connection';
+
+  @override
+  String get connectionSpeed => 'Connection Speed';
+
+  @override
+  String get ping => 'Ping';
+
+  @override
+  String get latency => 'Latency';
+
+  @override
+  String get ms => 'ms';
+
+  @override
+  String get kbps => 'KB/s';
+
+  @override
+  String get mbps => 'MB/s';
+
+  @override
+  String get gb => 'GB';
+
+  @override
+  String get mb => 'MB';
+
+  @override
+  String get kb => 'KB';
+
+  @override
+  String get bytes => 'Bytes';
+
+  @override
+  String get perSecond => '/s';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get thisWeek => 'This Week';
+
+  @override
+  String get thisMonth => 'This Month';
+
+  @override
+  String get allTime => 'All Time';
+
+  @override
+  String get trafficUsage => 'Traffic Usage';
+
+  @override
+  String get sessionDuration => 'Session Duration';
+
+  @override
+  String get averageSpeed => 'Average Speed';
+
+  @override
+  String get peakSpeed => 'Peak Speed';
+
+  @override
+  String get noData => 'No data available';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get duplicate => 'Duplicate';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get test => 'Test';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get selectAll => 'Select All';
+
+  @override
+  String get deselectAll => 'Deselect All';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get filter => 'Filter';
+
+  @override
+  String get sort => 'Sort';
+
+  @override
+  String get sortByName => 'Sort by Name';
+
+  @override
+  String get sortByDate => 'Sort by Date';
+
+  @override
+  String get sortByUsage => 'Sort by Usage';
+
+  @override
+  String get ascending => 'Ascending';
+
+  @override
+  String get descending => 'Descending';
+
+  @override
+  String get coreManagement => 'Core Management';
+
+  @override
+  String get installedCores => 'Installed Cores';
+
+  @override
+  String get availableCores => 'Available Cores';
+
+  @override
+  String get coreVersion => 'Core Version';
+
+  @override
+  String get latestVersion => 'Latest Version';
+
+  @override
+  String get updateCore => 'Update Core';
+
+  @override
+  String get installCore => 'Install Core';
+
+  @override
+  String get uninstallCore => 'Uninstall Core';
+
+  @override
+  String get coreUpdated => 'Core updated successfully';
+
+  @override
+  String get coreInstalled => 'Core installed successfully';
+
+  @override
+  String get coreUninstalled => 'Core uninstalled successfully';
+
+  @override
+  String get downloadingCore => 'Downloading core...';
+
+  @override
+  String get installingCore => 'Installing core...';
+
+  @override
+  String get uninstallingCore => 'Uninstalling core...';
+
+  @override
+  String get coreUpdateFailed => 'Core update failed';
+
+  @override
+  String get coreInstallFailed => 'Core installation failed';
+
+  @override
+  String get coreUninstallFailed => 'Core uninstallation failed';
+
+  @override
+  String get confirmUninstall =>
+      'Are you sure you want to uninstall this core?';
+
+  @override
+  String get xray => 'Xray';
+
+  @override
+  String get singbox => 'sing-box';
+
+  @override
+  String get hysteria2 => 'Hysteria2';
+
+  @override
+  String get connectionLogs => 'Connection Logs';
+
+  @override
+  String get viewLogs => 'View Logs';
+
+  @override
+  String get clearLogs => 'Clear Logs';
+
+  @override
+  String get exportLogs => 'Export Logs';
+
+  @override
+  String get logsCleared => 'Logs cleared';
+
+  @override
+  String get logsExported => 'Logs exported';
+
+  @override
+  String get noLogs => 'No logs available';
+
+  @override
+  String get copyLog => 'Copy Log';
+
+  @override
+  String get logCopied => 'Log copied to clipboard';
 }

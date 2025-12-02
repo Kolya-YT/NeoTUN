@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:convert';
+import '../l10n/app_localizations.dart';
 import '../services/config_storage.dart';
 import '../services/update_service.dart';
 import '../services/core_manager.dart';
@@ -74,8 +75,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               SwitchListTile(
-                title: const Text('Auto Update'),
-                subtitle: const Text('Automatically check for updates'),
+                title: Text(AppLocalizations.of(context)!.autoUpdate),
+                subtitle: Text(AppLocalizations.of(context)!.autoUpdateDescription),
                 value: _autoUpdate,
                 onChanged: (value) async {
                   await UpdateService.instance.setAutoUpdate(value);
@@ -83,20 +84,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               ListTile(
-                title: const Text('Check for Updates'),
-                subtitle: const Text('Manually check for app updates'),
+                title: Text(AppLocalizations.of(context)!.checkUpdates),
+                subtitle: Text('${AppLocalizations.of(context)!.version}: $_appVersion'),
                 trailing: const Icon(Icons.update),
                 onTap: _checkUpdates,
               ),
               ListTile(
-                title: const Text('Theme'),
-                subtitle: Text(_themeMode == 'dark' ? 'Dark' : _themeMode == 'light' ? 'Light' : 'System'),
+                title: Text(AppLocalizations.of(context)!.theme),
+                subtitle: Text(_themeMode == 'dark' ? AppLocalizations.of(context)!.dark : _themeMode == 'light' ? AppLocalizations.of(context)!.light : AppLocalizations.of(context)!.system),
                 trailing: const Icon(Icons.brightness_6),
                 onTap: () => _showThemeDialog(),
               ),
               ListTile(
-                title: const Text('Language'),
-                subtitle: Text(_language == 'ru' ? 'Русский' : 'English'),
+                title: Text(AppLocalizations.of(context)!.language),
+                subtitle: Text(_language == 'ru' ? AppLocalizations.of(context)!.russian : AppLocalizations.of(context)!.english),
                 trailing: const Icon(Icons.language),
                 onTap: () => _showLanguageDialog(),
               ),

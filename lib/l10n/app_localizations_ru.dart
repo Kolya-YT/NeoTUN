@@ -171,4 +171,347 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get coreNotInstalled => 'Ядро не установлено';
+
+  @override
+  String get general => 'Общие';
+
+  @override
+  String get network => 'Сеть';
+
+  @override
+  String get advanced => 'Расширенные';
+
+  @override
+  String get autoUpdate => 'Автообновление';
+
+  @override
+  String get autoUpdateDescription =>
+      'Автоматически проверять обновления при запуске';
+
+  @override
+  String get clearCache => 'Очистить кэш';
+
+  @override
+  String get clearCacheDescription => 'Очистить кэш приложения';
+
+  @override
+  String get dataDirectory => 'Папка данных';
+
+  @override
+  String get openDataDirectory => 'Открыть папку данных';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get russian => 'Русский';
+
+  @override
+  String get systemDefault => 'Системная';
+
+  @override
+  String get light => 'Светлая';
+
+  @override
+  String get dark => 'Тёмная';
+
+  @override
+  String get system => 'Системная';
+
+  @override
+  String get appearance => 'Внешний вид';
+
+  @override
+  String get selectTheme => 'Выбрать тему';
+
+  @override
+  String get selectLanguage => 'Выбрать язык';
+
+  @override
+  String get appInfo => 'О приложении';
+
+  @override
+  String get checkingForUpdates => 'Проверка обновлений...';
+
+  @override
+  String get upToDate => 'У вас последняя версия!';
+
+  @override
+  String get updateAvailable => 'Доступно обновление';
+
+  @override
+  String get downloadUpdate => 'Скачать обновление';
+
+  @override
+  String get noUpdateAvailable => 'Нет доступных обновлений';
+
+  @override
+  String get enterConfigName => 'Введите имя конфигурации';
+
+  @override
+  String get enterJsonConfig => 'Введите JSON конфигурацию';
+
+  @override
+  String get invalidJson => 'Неверный формат JSON';
+
+  @override
+  String get configSaved => 'Конфигурация сохранена';
+
+  @override
+  String get configDeleted => 'Конфигурация удалена';
+
+  @override
+  String get pasteFromClipboard => 'Вставить из буфера';
+
+  @override
+  String get copyToClipboard => 'Копировать в буфер';
+
+  @override
+  String get copiedToClipboard => 'Скопировано в буфер обмена';
+
+  @override
+  String get scanQrCode => 'Сканировать QR-код';
+
+  @override
+  String get importFromFile => 'Импорт из файла';
+
+  @override
+  String get exportToFile => 'Экспорт в файл';
+
+  @override
+  String get shareConfig => 'Поделиться конфигурацией';
+
+  @override
+  String get duplicateConfig => 'Дублировать конфигурацию';
+
+  @override
+  String get renameConfig => 'Переименовать конфигурацию';
+
+  @override
+  String get testConnection => 'Тест соединения';
+
+  @override
+  String get connectionSpeed => 'Скорость соединения';
+
+  @override
+  String get ping => 'Пинг';
+
+  @override
+  String get latency => 'Задержка';
+
+  @override
+  String get ms => 'мс';
+
+  @override
+  String get kbps => 'КБ/с';
+
+  @override
+  String get mbps => 'МБ/с';
+
+  @override
+  String get gb => 'ГБ';
+
+  @override
+  String get mb => 'МБ';
+
+  @override
+  String get kb => 'КБ';
+
+  @override
+  String get bytes => 'Байт';
+
+  @override
+  String get perSecond => '/с';
+
+  @override
+  String get today => 'Сегодня';
+
+  @override
+  String get thisWeek => 'На этой неделе';
+
+  @override
+  String get thisMonth => 'В этом месяце';
+
+  @override
+  String get allTime => 'За всё время';
+
+  @override
+  String get trafficUsage => 'Использование трафика';
+
+  @override
+  String get sessionDuration => 'Длительность сессии';
+
+  @override
+  String get averageSpeed => 'Средняя скорость';
+
+  @override
+  String get peakSpeed => 'Пиковая скорость';
+
+  @override
+  String get noData => 'Нет данных';
+
+  @override
+  String get loading => 'Загрузка...';
+
+  @override
+  String get retry => 'Повторить';
+
+  @override
+  String get close => 'Закрыть';
+
+  @override
+  String get ok => 'ОК';
+
+  @override
+  String get yes => 'Да';
+
+  @override
+  String get no => 'Нет';
+
+  @override
+  String get apply => 'Применить';
+
+  @override
+  String get discard => 'Отменить';
+
+  @override
+  String get edit => 'Редактировать';
+
+  @override
+  String get duplicate => 'Дублировать';
+
+  @override
+  String get rename => 'Переименовать';
+
+  @override
+  String get share => 'Поделиться';
+
+  @override
+  String get test => 'Тест';
+
+  @override
+  String get refresh => 'Обновить';
+
+  @override
+  String get clear => 'Очистить';
+
+  @override
+  String get selectAll => 'Выбрать всё';
+
+  @override
+  String get deselectAll => 'Снять выделение';
+
+  @override
+  String get search => 'Поиск';
+
+  @override
+  String get filter => 'Фильтр';
+
+  @override
+  String get sort => 'Сортировка';
+
+  @override
+  String get sortByName => 'По имени';
+
+  @override
+  String get sortByDate => 'По дате';
+
+  @override
+  String get sortByUsage => 'По использованию';
+
+  @override
+  String get ascending => 'По возрастанию';
+
+  @override
+  String get descending => 'По убыванию';
+
+  @override
+  String get coreManagement => 'Управление ядрами';
+
+  @override
+  String get installedCores => 'Установленные ядра';
+
+  @override
+  String get availableCores => 'Доступные ядра';
+
+  @override
+  String get coreVersion => 'Версия ядра';
+
+  @override
+  String get latestVersion => 'Последняя версия';
+
+  @override
+  String get updateCore => 'Обновить ядро';
+
+  @override
+  String get installCore => 'Установить ядро';
+
+  @override
+  String get uninstallCore => 'Удалить ядро';
+
+  @override
+  String get coreUpdated => 'Ядро успешно обновлено';
+
+  @override
+  String get coreInstalled => 'Ядро успешно установлено';
+
+  @override
+  String get coreUninstalled => 'Ядро успешно удалено';
+
+  @override
+  String get downloadingCore => 'Загрузка ядра...';
+
+  @override
+  String get installingCore => 'Установка ядра...';
+
+  @override
+  String get uninstallingCore => 'Удаление ядра...';
+
+  @override
+  String get coreUpdateFailed => 'Не удалось обновить ядро';
+
+  @override
+  String get coreInstallFailed => 'Не удалось установить ядро';
+
+  @override
+  String get coreUninstallFailed => 'Не удалось удалить ядро';
+
+  @override
+  String get confirmUninstall => 'Вы уверены, что хотите удалить это ядро?';
+
+  @override
+  String get xray => 'Xray';
+
+  @override
+  String get singbox => 'sing-box';
+
+  @override
+  String get hysteria2 => 'Hysteria2';
+
+  @override
+  String get connectionLogs => 'Логи подключения';
+
+  @override
+  String get viewLogs => 'Просмотр логов';
+
+  @override
+  String get clearLogs => 'Очистить логи';
+
+  @override
+  String get exportLogs => 'Экспортировать логи';
+
+  @override
+  String get logsCleared => 'Логи очищены';
+
+  @override
+  String get logsExported => 'Логи экспортированы';
+
+  @override
+  String get noLogs => 'Нет логов';
+
+  @override
+  String get copyLog => 'Копировать лог';
+
+  @override
+  String get logCopied => 'Лог скопирован в буфер обмена';
 }
