@@ -1105,6 +1105,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Log copied to clipboard'**
   String get logCopied;
+
+  /// No description provided for @autoReconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Reconnect'**
+  String get autoReconnect;
+
+  /// No description provided for @autoReconnectDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically reconnect if connection is lost'**
+  String get autoReconnectDescription;
+
+  /// No description provided for @pullToRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull to refresh'**
+  String get pullToRefresh;
 }
 
 class _AppLocalizationsDelegate

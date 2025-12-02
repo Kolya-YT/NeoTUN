@@ -514,4 +514,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get logCopied => 'Лог скопирован в буфер обмена';
+
+  @override
+  String get autoReconnect => 'Автопереподключение';
+
+  @override
+  String get autoReconnectDescription =>
+      'Автоматически переподключаться при потере соединения';
+
+  @override
+  String get pullToRefresh => 'Потяните для обновления';
 }

@@ -9,6 +9,7 @@ import '../services/config_storage.dart';
 import '../services/update_service.dart';
 import '../services/core_manager.dart';
 import '../services/subscription_parser.dart';
+import '../services/auto_reconnect.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(ThemeMode)? onThemeChanged;
@@ -28,6 +29,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoUpdate = true;
+  bool _autoReconnect = false;
   String _themeMode = 'system';
   String _language = 'en';
   String _appVersion = '1.0.0';
@@ -44,9 +46,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     final themeMode = prefs.getString('theme_mode') ?? 'system';
     final language = prefs.getString('language') ?? 'en';
+    final autoReconnect = AutoReconnect.instance.isEnabled;
     
     setState(() {
       _autoUpdate = autoUpdate;
+      _autoReconnect = autoReconnect;
       _appVersion = packageInfo.version;
       _themeMode = themeMode;
       _language = language;
@@ -81,6 +85,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) async {
                   await UpdateService.instance.setAutoUpdate(value);
                   setState(() => _autoUpdate = value);
+                },
+              ),
+              SwitchListTile(
+                title: Text(AppLocalizations.of(context)!.autoReconnect),
+                subtitle: Text(AppLocalizations.of(context)!.autoReconnectDescription),
+                value: _autoReconnect,
+                onChanged: (value) async {
+                  await AutoReconnect.instance.setEnabled(value);
+                  setState(() => _autoReconnect = value);
                 },
               ),
               ListTile(

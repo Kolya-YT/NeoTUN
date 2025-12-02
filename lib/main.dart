@@ -8,6 +8,7 @@ import 'services/core_manager.dart';
 import 'services/config_storage.dart';
 import 'services/update_service.dart';
 import 'services/traffic_stats.dart';
+import 'services/auto_reconnect.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,10 @@ void main() async {
     print('Initializing TrafficStats...');
     await TrafficStats.instance.init();
     print('TrafficStats initialized');
+    
+    print('Initializing AutoReconnect...');
+    await AutoReconnect.instance.init();
+    print('AutoReconnect initialized');
   } catch (e, stackTrace) {
     print('Initialization error: $e');
     print('Stack trace: $stackTrace');

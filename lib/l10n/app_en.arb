@@ -167,5 +167,9 @@
   "logsExported": "Logs exported",
   "noLogs": "No logs available",
   "copyLog": "Copy Log",
-  "logCopied": "Log copied to clipboard"
+  "logCopied": "Log copied to clipboard",
+  "autoReconnect": "Auto Reconnect",
+  "autoReconnectDescription": "Automatically reconnect if connection is lost",
+  "connectionSpeed": "Connection Speed",
+  "pullToRefresh": "Pull to refresh"
 }

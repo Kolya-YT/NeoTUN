@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../services/process_controller.dart';
+import '../widgets/speed_indicator.dart';
 
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
@@ -377,7 +378,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    if (isRunning && activeConfig != null)
+                                    if (isRunning && activeConfig != null) ...[
                                       Text(
                                         activeConfig.name,
                                         style: TextStyle(
@@ -387,6 +388,9 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
+                                      const SizedBox(height: 4),
+                                      const SpeedIndicator(isCompact: true),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -500,14 +504,20 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: configs.length,
-                  itemBuilder: (context, index) {
-                    final config = configs[index];
-                    final isActive = activeConfig?.id == config.id;
-                    return _buildConfigCard(context, config, isActive, isDark);
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    await Future.delayed(const Duration(milliseconds: 500));
+                    if (mounted) setState(() {});
                   },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: configs.length,
+                    itemBuilder: (context, index) {
+                      final config = configs[index];
+                      final isActive = activeConfig?.id == config.id;
+                      return _buildConfigCard(context, config, isActive, isDark);
+                    },
+                  ),
                 ),
         ),
       ],

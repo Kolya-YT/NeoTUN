@@ -515,4 +515,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logCopied => 'Log copied to clipboard';
+
+  @override
+  String get autoReconnect => 'Auto Reconnect';
+
+  @override
+  String get autoReconnectDescription =>
+      'Automatically reconnect if connection is lost';
+
+  @override
+  String get pullToRefresh => 'Pull to refresh';
 }
