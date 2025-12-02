@@ -145,6 +145,9 @@ class TunManager {
   }) {
     final config = Map<String, dynamic>.from(baseConfig);
     
+    print('[TUN] Creating sing-box TUN config');
+    print('[TUN] Base config has ${baseConfig.keys.length} keys');
+    
     // Добавляем TUN inbound
     config['inbounds'] = [
       {
@@ -163,7 +166,7 @@ class TunManager {
 
     // Настраиваем DNS
     config['dns'] = {
-      'servers': dnsServers ?? <Map<String, dynamic>>[
+      'servers': dnsServers ?? [
         {
           'tag': 'dns-remote',
           'address': '8.8.8.8',
@@ -175,7 +178,7 @@ class TunManager {
           'detour': 'direct',
         }
       ],
-      'rules': <Map<String, dynamic>>[
+      'rules': [
         {
           'geosite': 'cn',
           'server': 'dns-local',
@@ -183,20 +186,70 @@ class TunManager {
       ],
       'strategy': 'prefer_ipv4',
     };
+    
+    // Убеждаемся что route настроен правильно
+    if (config['route'] != null) {
+      final route = config['route'] as Map<String, dynamic>;
+      route['auto_detect_interface'] = true;
+    }
 
+    print('[TUN] TUN config created with ${config['inbounds'].length} inbounds');
     return config;
   }
 
-  /// Создать TUN конфигурацию для XRay (экспериментально)
+  /// Создать TUN конфигурацию для XRay (через dokodemo-door)
   Map<String, dynamic> createXrayTunConfig({
     required Map<String, dynamic> baseConfig,
   }) {
     final config = Map<String, dynamic>.from(baseConfig);
     
-    // XRay не имеет встроенной поддержки TUN
-    // Нужно использовать tun2socks или sing-box
-    print('⚠ XRay TUN mode requires external tun2socks');
+    print('[TUN] Creating Xray TUN config (dokodemo-door mode)');
     
+    // Для Xray используем dokodemo-door для перехвата трафика
+    // Это работает с нативной библиотекой AndroidLibXrayLite
+    config['inbounds'] = [
+      {
+        'tag': 'tun-in',
+        'port': 10808,
+        'protocol': 'dokodemo-door',
+        'settings': {
+          'network': 'tcp,udp',
+          'followRedirect': true,
+        },
+        'sniffing': {
+          'enabled': true,
+          'destOverride': ['http', 'tls'],
+        },
+      }
+    ];
+    
+    // Настраиваем DNS
+    config['dns'] = {
+      'servers': [
+        '8.8.8.8',
+        '8.8.4.4',
+        'localhost',
+      ],
+    };
+    
+    // Настраиваем routing для TUN
+    config['routing'] = {
+      'domainStrategy': 'IPIfNonMatch',
+      'rules': [
+        {
+          'type': 'field',
+          'ip': ['geoip:private'],
+          'outboundTag': 'direct',
+        },
+        {
+          'type': 'field',
+          'inboundTag': ['tun-in'],
+          'outboundTag': 'proxy',
+        },
+      ],
+    };
+    
+    print('[TUN] Xray TUN config created');
     return config;
   }
 

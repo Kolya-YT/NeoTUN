@@ -346,11 +346,25 @@ class CoreManager {
     
     // Если используем TUN, модифицируем конфигурацию
     Map<String, dynamic> finalConfig = config.config;
-    if (useTun && config.coreType == CoreType.singbox) {
-      finalConfig = TunManager.instance.createSingboxTunConfig(
-        baseConfig: config.config,
-      );
-      _logController.add('[TUN] Using TUN mode for sing-box');
+    if (useTun) {
+      _logController.add('[TUN] TUN mode requested for ${config.coreType.displayName}');
+      
+      if (config.coreType == CoreType.singbox) {
+        finalConfig = TunManager.instance.createSingboxTunConfig(
+          baseConfig: config.config,
+        );
+        _logController.add('[TUN] Created sing-box TUN config');
+        _logController.add('[TUN] Inbounds: ${finalConfig['inbounds']}');
+      } else if (config.coreType == CoreType.xray) {
+        // Для Xray используем dokodemo-door конфигурацию
+        finalConfig = TunManager.instance.createXrayTunConfig(
+          baseConfig: config.config,
+        );
+        _logController.add('[TUN] Created Xray TUN config (dokodemo-door)');
+        _logController.add('[TUN] Inbounds: ${finalConfig['inbounds']}');
+      } else {
+        _logController.add('[TUN] Warning: TUN mode not fully supported for ${config.coreType.displayName}');
+      }
     }
     
     try {
