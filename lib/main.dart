@@ -85,6 +85,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      key: ValueKey(_locale.languageCode),
       title: 'NeoTUN',
       themeMode: _themeMode,
       locale: _locale,
