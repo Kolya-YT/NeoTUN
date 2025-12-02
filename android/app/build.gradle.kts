@@ -62,6 +62,10 @@ flutter {
 }
 
 dependencies {
+    // Kotlin Coroutines для асинхронных операций (как в v2rayNG)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    
     // AndroidLibXrayLite для работы с Xray на Android
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     

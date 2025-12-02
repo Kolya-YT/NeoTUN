@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.2.2--beta.3-blue)
+![Version](https://img.shields.io/badge/version-v1.2.2--beta.4-blue)
 ![Beta](https://img.shields.io/badge/beta-testing-orange)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE.txt)
@@ -82,21 +82,97 @@
 
 ## Сборка
 
+### Требования
+
+- Flutter SDK 3.0+
+- Dart SDK 3.0+
+- **Android:** Android SDK, NDK 27.0.12077973, libxray.aar
+- **Windows:** Visual Studio 2022 Build Tools, xray.exe
+
+### Android
+
 ```bash
+# 1. Клонируйте репозиторий
 git clone https://github.com/Kolya-YT/NeoTUN.git
 cd NeoTUN
+
+# 2. Установите зависимости
 flutter pub get
 
-# Windows
-flutter build windows --release
+# 3. Скачайте libxray.aar (автоматически)
+# Windows:
+.\download_libxray.ps1
+# Linux/Mac:
+chmod +x download_libxray.sh
+./download_libxray.sh
 
-# Android
+# 4. Соберите APK
 flutter build apk --release --split-per-abi
 ```
 
+Подробнее: [docs/ANDROID_SETUP.md](docs/ANDROID_SETUP.md)
+
+### Windows
+
+```bash
+# 1. Клонируйте репозиторий
+git clone https://github.com/Kolya-YT/NeoTUN.git
+cd NeoTUN
+
+# 2. Установите зависимости
+flutter pub get
+
+# 3. Соберите приложение
+flutter build windows --release
+
+# 4. Xray-core скачается автоматически при первом запуске
+# Или скачайте вручную в cores/xray.exe
+```
+
+Подробнее: [docs/WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md)
+
 ## Архитектура
 
-**Android (Xray):** Flutter → MethodChannel → VpnService.kt → XrayHelper.kt → libxray.so (AndroidLibXrayLite)
+### Android (v2rayNG Architecture)
+
+```
+Flutter App
+    ↓ MethodChannel
+MainActivity.kt
+    ↓ Intent
+V2rayVpnService.kt (VPN Service)
+    ↓ JNI
+XrayHelper.kt
+    ↓ Native
+libxray.so (AndroidLibXrayLite)
+```
+
+**Основано на:** [v2rayNG](https://github.com/2dust/v2rayNG)
+
+**Ключевые компоненты:**
+- `V2rayVpnService` - VPN сервис с TUN интерфейсом
+- `XrayHelper` - JNI обертка для libxray.so
+- `libxray.aar` - нативная библиотека Xray-core
+- Kotlin Coroutines для асинхронных операций
+
+### Windows (v2rayN Architecture)
+
+```
+Flutter App
+    ↓
+CoreManager
+    ↓
+XrayWindowsService ──→ xray.exe (Process)
+    ↓
+WindowsProxy ──→ Windows Registry (System Proxy)
+```
+
+**Основано на:** [v2rayN](https://github.com/2dust/v2rayN)
+
+**Ключевые компоненты:**
+- `XrayWindowsService` - управление процессом xray.exe
+- `WindowsProxy` - системный прокси через WinAPI
+- gRPC API для статистики трафика
 
 **Windows:** Flutter → ProcessController → xray.exe / sing-box.exe / hysteria2.exe
 

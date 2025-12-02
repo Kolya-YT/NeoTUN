@@ -35,8 +35,7 @@ class MainActivity: FlutterActivity() {
                 }
                 "isRunning" -> {
                     // Проверяем запущен ли VPN сервис
-                    val isRunning = isServiceRunning(VpnService::class.java) || 
-                                   isServiceRunning(TunVpnService::class.java)
+                    val isRunning = V2rayVpnService.isRunning
                     result.success(isRunning)
                 }
                 "startTun" -> {
@@ -98,11 +97,10 @@ class MainActivity: FlutterActivity() {
             // Сохраняем параметры для запуска после получения разрешения
             pendingTunStart = Pair(coreType, configPath)
         } else {
-            // Разрешение уже есть
-            val intent = Intent(this, TunVpnService::class.java).apply {
-                action = TunVpnService.ACTION_START
-                putExtra(TunVpnService.EXTRA_CORE_TYPE, coreType)
-                putExtra(TunVpnService.EXTRA_CONFIG_PATH, configPath)
+            // Разрешение уже есть - используем V2rayVpnService
+            val intent = Intent(this, V2rayVpnService::class.java).apply {
+                action = V2rayVpnService.ACTION_START
+                putExtra(V2rayVpnService.EXTRA_CONFIG_PATH, configPath)
             }
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -114,8 +112,8 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun stopTunVpnService() {
-        val intent = Intent(this, TunVpnService::class.java).apply {
-            action = TunVpnService.ACTION_STOP
+        val intent = Intent(this, V2rayVpnService::class.java).apply {
+            action = V2rayVpnService.ACTION_STOP
         }
         startService(intent)
     }

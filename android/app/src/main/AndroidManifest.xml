@@ -33,17 +33,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
         
+        <!-- V2rayVpnService - основной VPN сервис как в v2rayNG -->
         <service
-            android:name=".VpnService"
+            android:name=".V2rayVpnService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-        
-        <service
-            android:name=".TunVpnService"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE">
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="android.net.VpnService"/>
             </intent-filter>

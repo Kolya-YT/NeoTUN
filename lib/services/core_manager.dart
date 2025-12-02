@@ -4,11 +4,13 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:archive/archive.dart';
+import 'package:flutter/services.dart';
 import '../models/core_type.dart';
 import '../models/vpn_config.dart';
 import 'download_service.dart';
 import 'xray_service.dart';
-import 'system_proxy.dart';
+import 'xray_windows_service.dart';
+import 'windows_proxy.dart';
 import 'traffic_stats.dart';
 import 'tun_manager.dart';
 
@@ -211,52 +213,15 @@ class CoreManager {
     try {
       _log('Starting Xray...');
       
-      // На Android принудительно используем TUN
       if (Platform.isAndroid) {
-        useTun = true;
-        _log('[ANDROID] Forcing TUN mode');
-      }
-      
-      // Если TUN режим - используем TunManager
-      if (useTun) {
-        _log('[TUN] Starting in TUN mode');
-        
-        // Создаём временный конфиг файл
-        final tempDir = await getTemporaryDirectory();
-        final configFile = File('${tempDir.path}/xray_tun_config.json');
-        
-        // Модифицируем конфиг для TUN
-        final tunConfig = TunManager.instance.createXrayTunConfig(
-          baseConfig: config.config,
-        );
-        
-        await configFile.writeAsString(
-          const JsonEncoder.withIndent('  ').convert(tunConfig),
-        );
-        
-        // Запускаем через TunManager
-        final success = await TunManager.instance.enableTun(
-          coreType: CoreType.xray,
-          configPath: configFile.path,
-        );
-        
-        if (!success) {
-          throw Exception('Failed to start TUN mode');
-        }
-        
-        _log('[TUN] ✓ TUN mode started');
+        // Android: используем V2rayVpnService через MethodChannel
+        await _startAndroid(config);
+      } else if (Platform.isWindows) {
+        // Windows: используем XrayWindowsService + WindowsProxy
+        await _startWindows(config);
       } else {
-        // Proxy режим - запускаем через XrayService
+        // Другие платформы: используем базовый XrayService
         await XrayService.instance.start(config);
-        
-        // Включаем системный прокси
-        final port = 10808; // SOCKS порт
-        final proxyEnabled = await SystemProxy.instance.enableProxy('127.0.0.1', port);
-        if (proxyEnabled) {
-          _log('✓ System proxy enabled: 127.0.0.1:$port');
-        } else {
-          _log('⚠ Failed to enable system proxy');
-        }
       }
       
       // Start traffic statistics
@@ -269,20 +234,64 @@ class CoreManager {
     }
   }
 
+  /// Запуск на Android через V2rayVpnService
+  Future<void> _startAndroid(VpnConfig config) async {
+    _log('[ANDROID] Starting V2rayVpnService...');
+    
+    // Создаём конфиг файл
+    final tempDir = await getTemporaryDirectory();
+    final configFile = File('${tempDir.path}/xray_config.json');
+    
+    await configFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(config.config),
+    );
+    
+    // Запускаем через MethodChannel
+    const platform = MethodChannel('com.neotun.app/vpn');
+    
+    try {
+      await platform.invokeMethod('startTun', {
+        'coreType': 'xray',
+        'configPath': configFile.path,
+      });
+      
+      _log('[ANDROID] ✓ V2rayVpnService started');
+    } on PlatformException catch (e) {
+      throw Exception('Failed to start Android VPN: ${e.message}');
+    }
+  }
+
+  /// Запуск на Windows через XrayWindowsService
+  Future<void> _startWindows(VpnConfig config) async {
+    _log('[WINDOWS] Starting XrayWindowsService...');
+    
+    // Запускаем Xray
+    await XrayWindowsService.instance.start(config);
+    
+    // Включаем системный прокси через WinAPI
+    const socksPort = 10808;
+    final proxyEnabled = await WindowsProxy.instance.enableProxy('127.0.0.1', socksPort);
+    
+    if (proxyEnabled) {
+      _log('[WINDOWS] ✓ System proxy enabled: 127.0.0.1:$socksPort');
+    } else {
+      _log('[WINDOWS] ⚠ Failed to enable system proxy');
+    }
+  }
+
   Future<void> stopCore() async {
     _log('Stopping Xray...');
     
-    // Останавливаем TUN если активен
-    if (TunManager.instance.isTunEnabled) {
-      await TunManager.instance.disableTun();
-      _log('[TUN] ✓ TUN mode disabled');
+    if (Platform.isAndroid) {
+      // Android: останавливаем V2rayVpnService
+      await _stopAndroid();
+    } else if (Platform.isWindows) {
+      // Windows: останавливаем XrayWindowsService + WindowsProxy
+      await _stopWindows();
+    } else {
+      // Другие платформы
+      await XrayService.instance.stop();
     }
-    
-    // Останавливаем XrayService
-    await XrayService.instance.stop();
-    
-    // Отключаем системный прокси
-    await SystemProxy.instance.disableProxy();
     
     // Останавливаем статистику
     TrafficStats.instance.stopSession();
@@ -290,8 +299,42 @@ class CoreManager {
     _log('✓ Xray stopped');
   }
 
-  bool get isRunning => XrayService.instance.isRunning || TunManager.instance.isTunEnabled;
-  VpnConfig? get activeConfig => XrayService.instance.activeConfig;
+  /// Остановка на Android
+  Future<void> _stopAndroid() async {
+    const platform = MethodChannel('com.neotun.app/vpn');
+    
+    try {
+      await platform.invokeMethod('stopTun');
+      _log('[ANDROID] ✓ V2rayVpnService stopped');
+    } on PlatformException catch (e) {
+      _log('[ANDROID] Failed to stop VPN: ${e.message}');
+    }
+  }
+
+  /// Остановка на Windows
+  Future<void> _stopWindows() async {
+    // Отключаем системный прокси
+    await WindowsProxy.instance.disableProxy();
+    _log('[WINDOWS] ✓ System proxy disabled');
+    
+    // Останавливаем Xray
+    await XrayWindowsService.instance.stop();
+    _log('[WINDOWS] ✓ XrayWindowsService stopped');
+  }
+
+  bool get isRunning {
+    if (Platform.isWindows) {
+      return XrayWindowsService.instance.isRunning;
+    }
+    return XrayService.instance.isRunning || TunManager.instance.isTunEnabled;
+  }
+  
+  VpnConfig? get activeConfig {
+    if (Platform.isWindows) {
+      return XrayWindowsService.instance.activeConfig;
+    }
+    return XrayService.instance.activeConfig;
+  }
   Directory get coreDirectory => _coreDir;
 
   void _log(String message) {
@@ -302,5 +345,8 @@ class CoreManager {
   void dispose() {
     _logController.close();
     XrayService.instance.dispose();
+    if (Platform.isWindows) {
+      XrayWindowsService.instance.dispose();
+    }
   }
 }

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.2-beta.3",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.3/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.2-beta.2: Complete Xray rewrite - Removed sing-box and Hysteria2, only Xray core with full TUN support and comprehensive logging",
+  "version": "1.2.2-beta.4",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.4/NeoTUN-Windows-x64.zip",
+  "changelog": "Beta 1.2.2-beta.4: Refactored to v2rayNG (Android) and v2rayN (Windows) architecture - libxray.so JNI, Kotlin Coroutines, WindowsProxy WinAPI",
   "cores": {
     "xray": {
       "version": "1.8.24",
