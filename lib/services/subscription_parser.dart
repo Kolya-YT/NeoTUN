@@ -7,6 +7,30 @@ class SubscriptionParser {
   static final SubscriptionParser instance = SubscriptionParser._();
   SubscriptionParser._();
 
+  // Alias for compatibility
+  static Future<List<VpnConfig>> fetchSubscription(String url) async {
+    return instance.parseSubscriptionUrl(url);
+  }
+
+  // Parse single share URL
+  static Future<VpnConfig?> parseShareUrl(String url) async {
+    final trimmed = url.trim();
+    
+    if (trimmed.startsWith('vless://')) {
+      return instance.parseVlessUrl(trimmed);
+    } else if (trimmed.startsWith('vmess://')) {
+      return instance.parseVmessUrl(trimmed);
+    } else if (trimmed.startsWith('trojan://')) {
+      return instance.parseTrojanUrl(trimmed);
+    } else if (trimmed.startsWith('ss://')) {
+      return instance.parseShadowsocksUrl(trimmed);
+    } else if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) {
+      return instance.parseHysteria2Url(trimmed);
+    }
+    
+    return null;
+  }
+
   Future<List<VpnConfig>> parseSubscriptionUrl(String url) async {
     try {
       final response = await http.get(Uri.parse(url));

@@ -524,4 +524,65 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pullToRefresh => 'Потяните для обновления';
+
+  @override
+  String get testing => 'Тестирование...';
+
+  @override
+  String get testFailed => 'Тест не пройден';
+
+  @override
+  String get testSuccessful => 'Тест успешен';
+
+  @override
+  String get timeout => 'Таймаут';
+
+  @override
+  String get unreachable => 'Недоступно';
+
+  @override
+  String get importFromClipboard => 'Импорт из буфера';
+
+  @override
+  String get clipboardEmpty => 'Буфер обмена пуст';
+
+  @override
+  String get invalidConfigFormat => 'Неверный формат конфигурации';
+
+  @override
+  String get configImported => 'Конфигурация импортирована';
+
+  @override
+  String get noValidConfigFound =>
+      'В буфере обмена не найдено корректной конфигурации';
+
+  @override
+  String get testAllConfigs => 'Тест всех конфигураций';
+
+  @override
+  String get testingConfigs => 'Тестирование конфигураций...';
+
+  @override
+  String get speedTest => 'Тест скорости';
+
+  @override
+  String get downloadSpeed => 'Скорость загрузки';
+
+  @override
+  String get uploadSpeed => 'Скорость отдачи';
+
+  @override
+  String get jitter => 'Джиттер';
+
+  @override
+  String get packetLoss => 'Потеря пакетов';
+
+  @override
+  String get testInProgress => 'Идёт тестирование...';
+
+  @override
+  String get startTest => 'Начать тест';
+
+  @override
+  String get stopTest => 'Остановить тест';
 }

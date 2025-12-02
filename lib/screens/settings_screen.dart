@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import '../services/update_service.dart';
 import '../services/core_manager.dart';
 import '../services/subscription_parser.dart';
 import '../services/auto_reconnect.dart';
+import '../utils/error_handler.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(ThemeMode)? onThemeChanged;
@@ -138,6 +140,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: Text(AppLocalizations.of(context)!.importFromFile),
                 trailing: const Icon(Icons.file_upload),
                 onTap: _importConfig,
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.pasteFromClipboard),
+                subtitle: const Text('Import config from clipboard'),
+                trailing: const Icon(Icons.content_paste),
+                onTap: _importFromClipboard,
               ),
               ListTile(
                 title: Text(AppLocalizations.of(context)!.exportConfig),
@@ -648,6 +656,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('language', result);
       widget.onLocaleChanged?.call(Locale(result));
+    }
+  }
+
+  Future<void> _importFromClipboard() async {
+    try {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = clipboardData?.text?.trim();
+      
+      if (text == null || text.isEmpty) {
+        if (mounted) {
+          ErrorHandler.showError(context, 'Clipboard is empty');
+        }
+        return;
+      }
+
+      // Проверяем что это URL протокола
+      if (text.startsWith('vless://') || 
+          text.startsWith('vmess://') || 
+          text.startsWith('trojan://') || 
+          text.startsWith('ss://') ||
+          text.startsWith('hysteria2://') ||
+          text.startsWith('hy2://')) {
+        
+        // Парсим как одиночную конфигурацию
+        final configs = SubscriptionParser.instance.parseSubscriptionContent(text);
+        
+        if (configs.isEmpty) {
+          if (mounted) {
+            ErrorHandler.showError(context, 'Failed to parse config from clipboard');
+          }
+          return;
+        }
+
+        // Сохраняем конфигурации
+        for (final config in configs) {
+          await ConfigStorage.instance.saveConfig(config);
+        }
+
+        if (mounted) {
+          ErrorHandler.showSuccess(
+            context,
+            'Imported ${configs.length} config(s) from clipboard',
+          );
+          widget.onConfigsChanged?.call();
+        }
+      } else if (text.startsWith('http://') || text.startsWith('https://')) {
+        // Это subscription URL
+        final configs = await SubscriptionParser.instance.parseSubscriptionUrl(text);
+        
+        if (configs.isEmpty) {
+          if (mounted) {
+            ErrorHandler.showError(context, 'No configs found in subscription');
+          }
+          return;
+        }
+
+        for (final config in configs) {
+          await ConfigStorage.instance.saveConfig(config);
+        }
+
+        if (mounted) {
+          ErrorHandler.showSuccess(
+            context,
+            'Imported ${configs.length} config(s) from subscription',
+          );
+          widget.onConfigsChanged?.call();
+        }
+      } else {
+        // Пытаемся парсить как JSON
+        try {
+          final json = jsonDecode(text);
+          // Здесь можно добавить логику импорта JSON конфигурации
+          if (mounted) {
+            ErrorHandler.showInfo(context, 'JSON config import not yet implemented');
+          }
+        } catch (e) {
+          if (mounted) {
+            ErrorHandler.showError(
+              context,
+              'Clipboard content is not a valid config URL or JSON',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showError(context, 'Import failed: ${ErrorHandler.getErrorMessage(e)}');
+      }
     }
   }
 }

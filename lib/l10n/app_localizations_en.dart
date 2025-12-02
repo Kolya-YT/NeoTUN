@@ -525,4 +525,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pullToRefresh => 'Pull to refresh';
+
+  @override
+  String get testing => 'Testing...';
+
+  @override
+  String get testFailed => 'Test failed';
+
+  @override
+  String get testSuccessful => 'Test successful';
+
+  @override
+  String get timeout => 'Timeout';
+
+  @override
+  String get unreachable => 'Unreachable';
+
+  @override
+  String get importFromClipboard => 'Import from Clipboard';
+
+  @override
+  String get clipboardEmpty => 'Clipboard is empty';
+
+  @override
+  String get invalidConfigFormat => 'Invalid configuration format';
+
+  @override
+  String get configImported => 'Configuration imported';
+
+  @override
+  String get noValidConfigFound => 'No valid configuration found in clipboard';
+
+  @override
+  String get testAllConfigs => 'Test All Configs';
+
+  @override
+  String get testingConfigs => 'Testing configurations...';
+
+  @override
+  String get speedTest => 'Speed Test';
+
+  @override
+  String get downloadSpeed => 'Download Speed';
+
+  @override
+  String get uploadSpeed => 'Upload Speed';
+
+  @override
+  String get jitter => 'Jitter';
+
+  @override
+  String get packetLoss => 'Packet Loss';
+
+  @override
+  String get testInProgress => 'Test in progress...';
+
+  @override
+  String get startTest => 'Start Test';
+
+  @override
+  String get stopTest => 'Stop Test';
 }

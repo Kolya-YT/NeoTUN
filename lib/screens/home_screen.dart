@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:math' as math;
+import 'dart:convert';
 import '../l10n/app_localizations.dart';
 import '../services/config_storage.dart';
 import '../services/core_manager.dart';
 import '../services/process_controller.dart';
+import '../services/connection_tester.dart';
+import '../services/subscription_parser.dart';
 import '../widgets/speed_indicator.dart';
+import '../utils/error_handler.dart';
 
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
@@ -117,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             onPressed: () => _openStats(),
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -126,7 +131,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               child: const Icon(Icons.add, size: 20),
             ),
-            onPressed: () => _addConfig(),
+            onSelected: (value) {
+              if (value == 'manual') {
+                _addConfig();
+              } else if (value == 'clipboard') {
+                _importFromClipboard();
+              } else if (value == 'test_all') {
+                _testAllConfigs();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'manual',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit),
+                    const SizedBox(width: 12),
+                    Text(AppLocalizations.of(context)!.addConfig),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clipboard',
+                child: Row(
+                  children: [
+                    const Icon(Icons.content_paste),
+                    const SizedBox(width: 12),
+                    Text(AppLocalizations.of(context)!.importFromClipboard),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'test_all',
+                child: Row(
+                  children: [
+                    const Icon(Icons.speed),
+                    const SizedBox(width: 12),
+                    Text(AppLocalizations.of(context)!.testAllConfigs),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
         ],
@@ -194,6 +239,237 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (context) => const StatsScreen()),
     );
+  }
+
+  Future<void> _importFromClipboard() async {
+    try {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = clipboardData?.text?.trim();
+
+      if (text == null || text.isEmpty) {
+        if (mounted) {
+          ErrorHandler.showError(
+            context,
+            AppLocalizations.of(context)!.clipboardEmpty,
+          );
+        }
+        return;
+      }
+
+      // Показываем диалог загрузки
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context)!.loading),
+            ],
+          ),
+        ),
+      );
+
+      List<VpnConfig> importedConfigs = [];
+
+      // Пробуем разные форматы
+      try {
+        // 1. Проверяем, это JSON конфигурация
+        final jsonData = json.decode(text);
+        if (jsonData is Map) {
+          // Определяем тип ядра по структуре
+          CoreType coreType = CoreType.xray;
+          if (jsonData.containsKey('inbounds') && jsonData.containsKey('outbounds')) {
+            if (jsonData['outbounds'] is List && 
+                (jsonData['outbounds'] as List).any((o) => o['type'] != null)) {
+              coreType = CoreType.singbox;
+            }
+          } else if (jsonData.containsKey('server') && jsonData.containsKey('auth')) {
+            coreType = CoreType.hysteria2;
+          }
+
+          final config = VpnConfig(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: 'Imported ${DateTime.now().toString().substring(0, 19)}',
+            coreType: coreType,
+            config: jsonData as Map<String, dynamic>,
+          );
+          importedConfigs.add(config);
+        }
+      } catch (e) {
+        // Не JSON, пробуем как subscription URL или share links
+        final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+        
+        for (final line in lines) {
+          final trimmed = line.trim();
+          
+          // Проверяем различные форматы ссылок
+          if (trimmed.startsWith('vless://') || 
+              trimmed.startsWith('vmess://') ||
+              trimmed.startsWith('trojan://') ||
+              trimmed.startsWith('ss://') ||
+              trimmed.startsWith('hysteria2://') ||
+              trimmed.startsWith('hy2://')) {
+            
+            try {
+              final parsed = await SubscriptionParser.parseShareUrl(trimmed);
+              if (parsed != null) {
+                importedConfigs.add(parsed);
+              }
+            } catch (e) {
+              print('Failed to parse share URL: $e');
+            }
+          } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            // Subscription URL
+            try {
+              final configs = await SubscriptionParser.fetchSubscription(trimmed);
+              importedConfigs.addAll(configs);
+            } catch (e) {
+              print('Failed to fetch subscription: $e');
+            }
+          }
+        }
+      }
+
+      if (mounted) {
+        Navigator.pop(context); // Закрываем диалог загрузки
+      }
+
+      if (importedConfigs.isEmpty) {
+        if (mounted) {
+          ErrorHandler.showError(
+            context,
+            AppLocalizations.of(context)!.noValidConfigFound,
+          );
+        }
+        return;
+      }
+
+      // Сохраняем конфигурации
+      for (final config in importedConfigs) {
+        await ConfigStorage.instance.saveConfig(config);
+      }
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)!.configImported}: ${importedConfigs.length}',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Закрываем диалог если открыт
+        ErrorHandler.showError(
+          context,
+          '${AppLocalizations.of(context)!.error}: ${ErrorHandler.getErrorMessage(e)}',
+        );
+      }
+    }
+  }
+
+  Future<void> _testAllConfigs() async {
+    final configs = ConfigStorage.instance.getConfigs();
+    if (configs.isEmpty) return;
+
+    if (!mounted) return;
+    
+    // Показываем диалог с прогрессом
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text(AppLocalizations.of(context)!.testAllConfigs),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(AppLocalizations.of(context)!.testingConfigs),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    final results = <String, ConnectionTestResult>{};
+
+    for (final config in configs) {
+      try {
+        // Запускаем конфигурацию
+        await CoreManager.instance.startCore(config, useTun: false);
+        await Future.delayed(const Duration(seconds: 2));
+
+        // Тестируем
+        final result = await ConnectionTester.instance.testConnection();
+        results[config.id] = result;
+
+        // Останавливаем
+        await CoreManager.instance.stopCore();
+        await Future.delayed(const Duration(milliseconds: 500));
+      } catch (e) {
+        print('Failed to test config ${config.name}: $e');
+        final failedResult = ConnectionTestResult();
+        failedResult.isConnected = false;
+        failedResult.averagePing = -1;
+        failedResult.httpLatency = -1;
+        results[config.id] = failedResult;
+      }
+    }
+
+    if (mounted) {
+      Navigator.pop(context); // Закрываем диалог прогресса
+
+      // Показываем результаты
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppLocalizations.of(context)!.testAllConfigs),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: configs.length,
+              itemBuilder: (context, index) {
+                final config = configs[index];
+                final result = results[config.id];
+                
+                return ListTile(
+                  leading: Icon(
+                    result?.isConnected == true ? Icons.check_circle : Icons.error,
+                    color: result?.isConnected == true ? Colors.green : Colors.red,
+                  ),
+                  title: Text(config.name),
+                  subtitle: result != null
+                      ? Text(
+                          result.isConnected
+                              ? '${AppLocalizations.of(context)!.ping}: ${result.averagePing}ms'
+                              : AppLocalizations.of(context)!.testFailed,
+                        )
+                      : Text(AppLocalizations.of(context)!.error),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppLocalizations.of(context)!.close),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 
@@ -645,7 +921,15 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (!isActive)
+                    if (!isActive) ...[
+                      IconButton(
+                        icon: Icon(
+                          Icons.speed,
+                          color: Colors.orange.shade400,
+                          size: 24,
+                        ),
+                        onPressed: () => _testConfig(config),
+                      ),
                       IconButton(
                         icon: Icon(
                           Icons.play_circle_filled,
@@ -654,6 +938,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                         ),
                         onPressed: () => _startConfig(config),
                       ),
+                    ],
                     IconButton(
                       icon: Icon(
                         Icons.delete_outline,
@@ -738,6 +1023,117 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
       await ConfigStorage.instance.deleteConfig(id);
       if (mounted) setState(() {});
     }
+  }
+
+  Future<void> _testConfig(VpnConfig config) async {
+    // Показываем диалог с прогрессом
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.testConnection),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(AppLocalizations.of(context)!.loading),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Временно запускаем конфигурацию для теста
+      await CoreManager.instance.startCore(config, useTun: _useTunMode);
+      
+      // Ждем инициализации
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Тестируем соединение
+      final result = await ConnectionTester.instance.testConnection();
+      
+      // Останавливаем
+      await CoreManager.instance.stopCore();
+      
+      if (mounted) {
+        Navigator.pop(context); // Закрываем диалог прогресса
+        
+        // Показываем результаты
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(AppLocalizations.of(context)!.testConnection),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTestResultRow(
+                  Icons.wifi,
+                  'Status',
+                  result.isConnected ? 'Connected' : 'Failed',
+                  result.isConnected ? Colors.green : Colors.red,
+                ),
+                const SizedBox(height: 8),
+                _buildTestResultRow(
+                  Icons.speed,
+                  AppLocalizations.of(context)!.ping,
+                  result.averagePing > 0 ? '${result.averagePing}ms' : 'N/A',
+                  _getPingColor(result.averagePing),
+                ),
+                const SizedBox(height: 8),
+                _buildTestResultRow(
+                  Icons.http,
+                  'HTTP Latency',
+                  result.httpLatency > 0 ? '${result.httpLatency}ms' : 'N/A',
+                  _getPingColor(result.httpLatency),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppLocalizations.of(context)!.close),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Закрываем диалог прогресса
+        ErrorHandler.showError(
+          context,
+          'Test failed: ${ErrorHandler.getErrorMessage(e)}',
+        );
+      }
+    }
+  }
+
+  Widget _buildTestResultRow(IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        Text(
+          value,
+          style: TextStyle(color: color, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Color _getPingColor(int ping) {
+    if (ping < 0) return Colors.grey;
+    if (ping < 100) return Colors.green;
+    if (ping < 300) return Colors.orange;
+    return Colors.red;
   }
 }
 

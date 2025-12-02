@@ -1123,6 +1123,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pull to refresh'**
   String get pullToRefresh;
+
+  /// No description provided for @testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get testing;
+
+  /// No description provided for @testFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Test failed'**
+  String get testFailed;
+
+  /// No description provided for @testSuccessful.
+  ///
+  /// In en, this message translates to:
+  /// **'Test successful'**
+  String get testSuccessful;
+
+  /// No description provided for @timeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout'**
+  String get timeout;
+
+  /// No description provided for @unreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get unreachable;
+
+  /// No description provided for @importFromClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from Clipboard'**
+  String get importFromClipboard;
+
+  /// No description provided for @clipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard is empty'**
+  String get clipboardEmpty;
+
+  /// No description provided for @invalidConfigFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid configuration format'**
+  String get invalidConfigFormat;
+
+  /// No description provided for @configImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration imported'**
+  String get configImported;
+
+  /// No description provided for @noValidConfigFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No valid configuration found in clipboard'**
+  String get noValidConfigFound;
+
+  /// No description provided for @testAllConfigs.
+  ///
+  /// In en, this message translates to:
+  /// **'Test All Configs'**
+  String get testAllConfigs;
+
+  /// No description provided for @testingConfigs.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing configurations...'**
+  String get testingConfigs;
+
+  /// No description provided for @speedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Test'**
+  String get speedTest;
+
+  /// No description provided for @downloadSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Speed'**
+  String get downloadSpeed;
+
+  /// No description provided for @uploadSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Speed'**
+  String get uploadSpeed;
+
+  /// No description provided for @jitter.
+  ///
+  /// In en, this message translates to:
+  /// **'Jitter'**
+  String get jitter;
+
+  /// No description provided for @packetLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Packet Loss'**
+  String get packetLoss;
+
+  /// No description provided for @testInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Test in progress...'**
+  String get testInProgress;
+
+  /// No description provided for @startTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Test'**
+  String get startTest;
+
+  /// No description provided for @stopTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Test'**
+  String get stopTest;
 }
 
 class _AppLocalizationsDelegate
