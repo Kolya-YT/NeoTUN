@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p android/app/libs
           wget -O android/app/libs/AndroidLibXrayLite.aar \
-            https://github.com/2dust/AndroidLibXrayLite/releases/download/v25.12.1/AndroidLibXrayLite.aar
+            https://github.com/2dust/AndroidLibXrayLite/releases/download/v25.12.1/libv2ray.aar
           
           # Verify the AAR file is valid
           if ! unzip -t android/app/libs/AndroidLibXrayLite.aar > /dev/null 2>&1; then
