@@ -1,7 +1,7 @@
 {
   "version": "1.2.1-beta.3",
   "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.3/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.1-beta.3: Fixed TUN mode routing issues, improved DNS configuration, better Android VPN stability",
+  "changelog": "Beta 1.2.1-beta.3: CRITICAL FIX - Resolved 'Connected but no internet' issue with proper DNS and routing configuration",
   "cores": {
     "xray": {
       "version": "1.8.7",

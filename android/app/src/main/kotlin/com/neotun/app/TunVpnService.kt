@@ -70,13 +70,16 @@ class TunVpnService : VpnService() {
                 .addRoute("0.0.0.0", 0)
                 .addDnsServer("8.8.8.8")
                 .addDnsServer("8.8.4.4")
-                .addDnsServer("1.1.1.1")
-                .setMtu(1500)
+                .setMtu(9000)
                 .setBlocking(false)
 
-            // НЕ исключаем собственное приложение - это может вызывать проблемы с маршрутизацией
-            // Вместо этого ядро само должно правильно обрабатывать трафик
-            android.util.Log.d("TunVpnService", "VPN will route all traffic through core")
+            // Исключаем собственное приложение из VPN
+            try {
+                builder.addDisallowedApplication(packageName)
+                android.util.Log.d("TunVpnService", "Excluded own package from VPN")
+            } catch (e: Exception) {
+                android.util.Log.w("TunVpnService", "Could not exclude own package: ${e.message}")
+            }
 
             // Устанавливаем VPN интерфейс
             vpnInterface = builder.establish()

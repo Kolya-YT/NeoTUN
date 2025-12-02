@@ -84,13 +84,25 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
-        'log': {'loglevel': 'info'},
+        'log': {'loglevel': 'warning'},
+        'dns': {
+          'servers': [
+            '8.8.8.8',
+            '8.8.4.4',
+            '1.1.1.1',
+            'localhost'
+          ]
+        },
         'inbounds': [
           {
             'port': 10808,
             'protocol': 'socks',
             'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in'
+            'tag': 'socks-in',
+            'sniffing': {
+              'enabled': true,
+              'destOverride': ['http', 'tls']
+            }
           },
           {
             'port': 10809,
@@ -137,11 +149,16 @@ class SubscriptionParser {
           }
         ],
         'routing': {
-          'domainStrategy': 'IPIfNonMatch',
+          'domainStrategy': 'AsIs',
           'rules': [
             {
               'type': 'field',
               'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            },
+            {
+              'type': 'field',
+              'domain': ['geosite:cn'],
               'outboundTag': 'direct'
             }
           ]
@@ -167,13 +184,25 @@ class SubscriptionParser {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
       
       final config = {
-        'log': {'loglevel': 'info'},
+        'log': {'loglevel': 'warning'},
+        'dns': {
+          'servers': [
+            '8.8.8.8',
+            '8.8.4.4',
+            '1.1.1.1',
+            'localhost'
+          ]
+        },
         'inbounds': [
           {
             'port': 10808,
             'protocol': 'socks',
             'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in'
+            'tag': 'socks-in',
+            'sniffing': {
+              'enabled': true,
+              'destOverride': ['http', 'tls']
+            }
           },
           {
             'port': 10809,
@@ -215,11 +244,16 @@ class SubscriptionParser {
           }
         ],
         'routing': {
-          'domainStrategy': 'IPIfNonMatch',
+          'domainStrategy': 'AsIs',
           'rules': [
             {
               'type': 'field',
               'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            },
+            {
+              'type': 'field',
+              'domain': ['geosite:cn'],
               'outboundTag': 'direct'
             }
           ]
@@ -249,13 +283,25 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
-        'log': {'loglevel': 'info'},
+        'log': {'loglevel': 'warning'},
+        'dns': {
+          'servers': [
+            '8.8.8.8',
+            '8.8.4.4',
+            '1.1.1.1',
+            'localhost'
+          ]
+        },
         'inbounds': [
           {
             'port': 10808,
             'protocol': 'socks',
             'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in'
+            'tag': 'socks-in',
+            'sniffing': {
+              'enabled': true,
+              'destOverride': ['http', 'tls']
+            }
           },
           {
             'port': 10809,
@@ -294,11 +340,16 @@ class SubscriptionParser {
           }
         ],
         'routing': {
-          'domainStrategy': 'IPIfNonMatch',
+          'domainStrategy': 'AsIs',
           'rules': [
             {
               'type': 'field',
               'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            },
+            {
+              'type': 'field',
+              'domain': ['geosite:cn'],
               'outboundTag': 'direct'
             }
           ]
@@ -330,13 +381,25 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
-        'log': {'loglevel': 'info'},
+        'log': {'loglevel': 'warning'},
+        'dns': {
+          'servers': [
+            '8.8.8.8',
+            '8.8.4.4',
+            '1.1.1.1',
+            'localhost'
+          ]
+        },
         'inbounds': [
           {
             'port': 10808,
             'protocol': 'socks',
             'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in'
+            'tag': 'socks-in',
+            'sniffing': {
+              'enabled': true,
+              'destOverride': ['http', 'tls']
+            }
           },
           {
             'port': 10809,
@@ -369,11 +432,16 @@ class SubscriptionParser {
           }
         ],
         'routing': {
-          'domainStrategy': 'IPIfNonMatch',
+          'domainStrategy': 'AsIs',
           'rules': [
             {
               'type': 'field',
               'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            },
+            {
+              'type': 'field',
+              'domain': ['geosite:cn'],
               'outboundTag': 'direct'
             }
           ]
