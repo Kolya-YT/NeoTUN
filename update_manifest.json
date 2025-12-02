@@ -1,6 +1,6 @@
 {
-  "version": "1.2.2-beta.2",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.2/NeoTUN-Windows-x64.zip",
+  "version": "1.2.2-beta.3",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.3/NeoTUN-Windows-x64.zip",
   "changelog": "Beta 1.2.2-beta.2: Complete Xray rewrite - Removed sing-box and Hysteria2, only Xray core with full TUN support and comprehensive logging",
   "cores": {
     "xray": {

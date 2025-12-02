@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.2.2--beta.2-blue)
+![Version](https://img.shields.io/badge/version-v1.2.2--beta.3-blue)
 ![Beta](https://img.shields.io/badge/beta-testing-orange)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE.txt)

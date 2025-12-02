@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.2-beta.3] - 2024-12-02
+
+### Changed
+- Version bump for new release build
+
 ## [1.2.2-beta.2] - 2024-12-02
 
 ### Added
