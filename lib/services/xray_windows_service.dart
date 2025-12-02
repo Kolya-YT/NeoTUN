@@ -62,22 +62,6 @@ class XrayWindowsService {
         _log('Could not read config for logging: $e');
       }
 
-      // Тестируем конфигурацию перед запуском
-      _log('Testing configuration...');
-      final testResult = await Process.run(
-        xrayPath,
-        ['test', '-c', configFile.path],
-        workingDirectory: Directory.current.path,
-      );
-      
-      if (testResult.exitCode != 0) {
-        final errorOutput = testResult.stderr.toString();
-        _log('Configuration test failed: $errorOutput');
-        throw Exception('Invalid Xray configuration:\n$errorOutput');
-      }
-      
-      _log('✓ Configuration test passed');
-      
       // Запускаем xray.exe как в v2rayN
       _log('Command: $xrayPath run -c ${configFile.path}');
       
