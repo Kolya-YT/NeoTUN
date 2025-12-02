@@ -1,14 +1,14 @@
 {
   "latest_version": "1.2.2-beta.16",
-  "notes": "Release 1.2.2-beta.16: Fixed Windows exit code 23 error with config validation, added libxray.aar for Android VPN support",
+  "notes": "Release 1.2.2-beta.16",
   "platforms": {
     "windows-x64": {
       "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.16/NeoTUN-Windows-x64.zip",
-      "sha256": "732785e4d62507eaf7c4e907394139c4a6a6bb733bab8021332ca4333c91e526"
+      "sha256": "0a4c32a374a5201cf871fb186d30d94ae47f97070b1db0071162363570e3ca0e"
     },
     "android-arm64": {
       "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.16/app-arm64-v8a-release.apk",
-      "sha256": "64272753331184e0f53d767a3c4bca6a72b4beaced7d210fbbfbad4e214f5c25"
+      "sha256": "138dbb8f41e467af3d39157e0bc87e53a5ad6257971ccbdf780a17d5b176c7b8"
     }
   }
 }
