@@ -1,7 +1,7 @@
 {
-  "version": "1.2.2-beta.17",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.17/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.2-beta.17: Enhanced Windows logging with step-by-step diagnostics, config validation, port checking. Fixed Android VPN with correct libxray API (CoreController). Added comprehensive debug guides.",
+  "version": "1.2.2-beta.18",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.18/NeoTUN-Windows-x64.zip",
+  "changelog": "Beta 1.2.2-beta.18: Fixed Android compilation - use JNI methods directly (startV2Ray, stopV2Ray, getVersion). Enhanced Windows diagnostics with step-by-step logging, config validation, port checking.",
   "cores": {
     "xray": {
       "version": "1.8.24",
