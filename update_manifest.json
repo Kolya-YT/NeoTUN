@@ -1,7 +1,7 @@
 {
-  "version": "1.2.2-beta.4",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.4/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.2-beta.4: Refactored to v2rayNG (Android) and v2rayN (Windows) architecture - libxray.so JNI, Kotlin Coroutines, WindowsProxy WinAPI",
+  "version": "1.2.2-beta.5",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.5/NeoTUN-Windows-x64.zip",
+  "changelog": "Beta 1.2.2-beta.5: Automatic download of xray-core and libxray, auto-update checks, fixed Android build",
   "cores": {
     "xray": {
       "version": "1.8.24",
