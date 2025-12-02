@@ -1,0 +1,5 @@
+[33mdbdc8fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbeta[m[33m, [m[1;33mtag: [m[1;33mv1.2.0-beta.4[m[33m, [m[1;31morigin/beta[m[33m)[m Bump version to 1.2.0-beta.4
+[33m587adcf[m Fix localization imports and deprecated withOpacity calls
+[33m1dc1625[m Bump version to 1.2.0-beta.3
+[33maf5087b[m Remove localization and fix CardTheme for Flutter 3.24 compatibility
+[33m0824807[m Fix all remaining compilation errors - remove const from localizationsDelegates, fix DropdownButtonFormField, delete old file
