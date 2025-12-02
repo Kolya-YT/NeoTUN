@@ -33,9 +33,18 @@ jobs:
       - name: Download AndroidLibXrayLite AAR
         run: |
           mkdir -p android/app/libs
-          curl -L -o android/app/libs/AndroidLibXrayLite.aar \
-            https://github.com/2dust/AndroidLibXrayLite/releases/download/1.8.24/AndroidLibXrayLite-1.8.24.aar || \
-          echo "Warning: Failed to download AAR, will try Gradle dependency"
+          wget -O android/app/libs/AndroidLibXrayLite.aar \
+            https://github.com/2dust/AndroidLibXrayLite/releases/download/1.8.24/AndroidLibXrayLite-1.8.24.aar
+          
+          # Verify the AAR file is valid
+          if ! unzip -t android/app/libs/AndroidLibXrayLite.aar > /dev/null 2>&1; then
+            echo "ERROR: Downloaded AAR is corrupted!"
+            rm -f android/app/libs/AndroidLibXrayLite.aar
+            exit 1
+          fi
+          
+          echo "AAR downloaded and verified successfully"
+          ls -lh android/app/libs/AndroidLibXrayLite.aar
       
       - name: Install dependencies
         run: flutter pub get
