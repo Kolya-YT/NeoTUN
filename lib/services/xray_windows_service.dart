@@ -73,20 +73,29 @@ class XrayWindowsService {
         }
       });
 
+      // Проверяем что процесс запустился
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Проверяем exitCode - если процесс уже завершился, будет доступен
+      final exitCodeFuture = _process!.exitCode;
+      final timeoutFuture = Future.delayed(const Duration(seconds: 2));
+      
+      final result = await Future.any([exitCodeFuture, timeoutFuture]);
+      
+      if (result is int) {
+        // Процесс завершился с ошибкой
+        _process = null;
+        _activeConfig = null;
+        throw Exception('Xray process terminated with exit code: $result\nCheck configuration and Xray installation.');
+      }
+      
+      // Процесс работает, настраиваем обработчик завершения
       _process!.exitCode.then((code) {
         _log('Xray exited with code: $code');
         _process = null;
         _activeConfig = null;
         _statsTimer?.cancel();
       });
-
-      // Ждём инициализации
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Проверяем что процесс всё ещё работает
-      if (_process == null) {
-        throw Exception('Xray process terminated unexpectedly');
-      }
 
       // Запускаем мониторинг статистики
       _startStatsMonitoring();
