@@ -157,8 +157,6 @@
   "coreUninstallFailed": "Core uninstallation failed",
   "confirmUninstall": "Are you sure you want to uninstall this core?",
   "xray": "Xray",
-  "singbox": "sing-box",
-  "hysteria2": "Hysteria2",
   "connectionLogs": "Connection Logs",
   "viewLogs": "View Logs",
   "clearLogs": "Clear Logs",

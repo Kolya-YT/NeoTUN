@@ -484,12 +484,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get xray => 'Xray';
 
   @override
-  String get singbox => 'sing-box';
-
-  @override
-  String get hysteria2 => 'Hysteria2';
-
-  @override
   String get connectionLogs => 'Connection Logs';
 
   @override

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.2.1--beta.3-blue)
+![Version](https://img.shields.io/badge/version-v1.2.2--beta.1-blue)
 ![Beta](https://img.shields.io/badge/beta-testing-orange)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE.txt)
@@ -17,9 +17,9 @@
 
 ## Возможности
 
-### Ядра и протоколы
-- **Поддержка ядер:** XRay-core, sing-box, Hysteria2
-- **Протоколы:** VLESS, VMess, Trojan, Shadowsocks, Hysteria2
+### Ядро и протоколы
+- **Ядро:** Xray-core (самое надёжное и популярное)
+- **Протоколы:** VLESS, VMess, Trojan, Shadowsocks
 - **Режимы:** Proxy Mode, TUN Mode (Android)
 
 ### Управление конфигурациями
@@ -106,7 +106,5 @@ MIT License - см. [LICENSE.txt](LICENSE.txt)
 
 ## Благодарности
 
-- [XRay-core](https://github.com/XTLS/Xray-core)
-- [sing-box](https://github.com/SagerNet/sing-box)
-- [Hysteria](https://github.com/apernet/hysteria)
-- [Flutter](https://flutter.dev)
+- [Xray-core](https://github.com/XTLS/Xray-core) - The best proxy core
+- [Flutter](https://flutter.dev) - Beautiful cross-platform framework

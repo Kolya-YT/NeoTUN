@@ -24,8 +24,6 @@ class SubscriptionParser {
       return instance.parseTrojanUrl(trimmed);
     } else if (trimmed.startsWith('ss://')) {
       return instance.parseShadowsocksUrl(trimmed);
-    } else if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) {
-      return instance.parseHysteria2Url(trimmed);
     }
     
     return null;
@@ -64,13 +62,57 @@ class SubscriptionParser {
       } else if (trimmed.startsWith('ss://')) {
         final config = parseShadowsocksUrl(trimmed);
         if (config != null) configs.add(config);
-      } else if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) {
-        final config = parseHysteria2Url(trimmed);
-        if (config != null) configs.add(config);
       }
     }
     
     return configs;
+  }
+
+  /// Базовая конфигурация Xray
+  Map<String, dynamic> _createBaseConfig() {
+    return {
+      'log': {
+        'loglevel': 'warning',
+      },
+      'dns': {
+        'servers': [
+          '8.8.8.8',
+          '8.8.4.4',
+          '1.1.1.1',
+        ],
+      },
+      'inbounds': [
+        {
+          'port': 10808,
+          'protocol': 'socks',
+          'settings': {
+            'auth': 'noauth',
+            'udp': true,
+          },
+          'sniffing': {
+            'enabled': true,
+            'destOverride': ['http', 'tls'],
+          },
+          'tag': 'socks-in',
+        },
+        {
+          'port': 10809,
+          'protocol': 'http',
+          'tag': 'http-in',
+        },
+      ],
+      'outbounds': [],
+      'routing': {
+        'domainStrategy': 'AsIs',
+        'rules': [
+          {
+            'type': 'field',
+            'ip': ['geoip:private'],
+            'outboundTag': 'direct',
+          },
+        ],
+      },
+    };
   }
 
   VpnConfig? parseVlessUrl(String url) {
@@ -83,87 +125,55 @@ class SubscriptionParser {
       
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
-      final config = {
-        'log': {'loglevel': 'warning'},
-        'dns': {
-          'servers': [
-            '8.8.8.8',
-            '8.8.4.4',
-            '1.1.1.1',
-            'localhost'
-          ]
+      final config = _createBaseConfig();
+      
+      // Добавляем VLESS outbound
+      config['outbounds'] = [
+        {
+          'protocol': 'vless',
+          'settings': {
+            'vnext': [
+              {
+                'address': address,
+                'port': port,
+                'users': [
+                  {
+                    'id': uuid,
+                    'encryption': params['encryption'] ?? 'none',
+                    if (params['flow'] != null && params['flow']!.isNotEmpty)
+                      'flow': params['flow'],
+                  }
+                ]
+              }
+            ]
+          },
+          'streamSettings': {
+            'network': params['type'] ?? 'tcp',
+            'security': params['security'] ?? 'none',
+            if (params['security'] == 'tls')
+              'tlsSettings': {
+                'serverName': params['sni'] ?? address,
+                'allowInsecure': params['allowInsecure'] == '1',
+              },
+            if (params['security'] == 'reality')
+              'realitySettings': {
+                'serverName': params['sni'] ?? address,
+                'publicKey': params['pbk'] ?? '',
+                'shortId': params['sid'] ?? '',
+                'fingerprint': params['fp'] ?? 'chrome',
+              },
+          },
+          'tag': 'proxy'
         },
-        'inbounds': [
-          {
-            'port': 10808,
-            'protocol': 'socks',
-            'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in',
-            'sniffing': {
-              'enabled': true,
-              'destOverride': ['http', 'tls']
-            }
-          },
-          {
-            'port': 10809,
-            'protocol': 'http',
-            'tag': 'http-in'
-          }
-        ],
-        'outbounds': [
-          {
-            'protocol': 'vless',
-            'settings': {
-              'vnext': [
-                {
-                  'address': address,
-                  'port': port,
-                  'users': [
-                    {
-                      'id': uuid,
-                      'encryption': params['encryption'] ?? 'none',
-                      'flow': params['flow'] ?? '',
-                    }
-                  ]
-                }
-              ]
-            },
-            'streamSettings': {
-              'network': params['type'] ?? 'tcp',
-              'security': params['security'] ?? 'none',
-              if (params['security'] == 'tls' || params['security'] == 'reality')
-                'tlsSettings': {
-                  'serverName': params['sni'] ?? address,
-                  'allowInsecure': params['allowInsecure'] == '1',
-                }
-            },
-            'tag': 'proxy'
-          },
-          {
-            'protocol': 'freedom',
-            'tag': 'direct'
-          },
-          {
-            'protocol': 'blackhole',
-            'tag': 'block'
-          }
-        ],
-        'routing': {
-          'domainStrategy': 'AsIs',
-          'rules': [
-            {
-              'type': 'field',
-              'ip': ['geoip:private'],
-              'outboundTag': 'direct'
-            },
-            {
-              'type': 'field',
-              'domain': ['geosite:cn'],
-              'outboundTag': 'direct'
-            }
-          ]
+        {
+          'protocol': 'freedom',
+          'tag': 'direct'
+        },
+        {
+          'protocol': 'blackhole',
+          'tag': 'block'
         }
-      };
+      ];
       
       return VpnConfig(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -183,82 +193,47 @@ class SubscriptionParser {
       final jsonStr = utf8.decode(base64.decode(base64Str));
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
       
-      final config = {
-        'log': {'loglevel': 'warning'},
-        'dns': {
-          'servers': [
-            '8.8.8.8',
-            '8.8.4.4',
-            '1.1.1.1',
-            'localhost'
-          ]
+      final config = _createBaseConfig();
+      
+      // Добавляем VMess outbound
+      config['outbounds'] = [
+        {
+          'protocol': 'vmess',
+          'settings': {
+            'vnext': [
+              {
+                'address': json['add'],
+                'port': int.parse(json['port'].toString()),
+                'users': [
+                  {
+                    'id': json['id'],
+                    'alterId': int.parse(json['aid']?.toString() ?? '0'),
+                    'security': json['scy'] ?? 'auto',
+                  }
+                ]
+              }
+            ]
+          },
+          'streamSettings': {
+            'network': json['net'] ?? 'tcp',
+            'security': json['tls'] ?? 'none',
+            if (json['tls'] == 'tls')
+              'tlsSettings': {
+                'serverName': json['sni'] ?? json['add'],
+                'allowInsecure': json['allowInsecure'] == '1',
+              },
+          },
+          'tag': 'proxy'
         },
-        'inbounds': [
-          {
-            'port': 10808,
-            'protocol': 'socks',
-            'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in',
-            'sniffing': {
-              'enabled': true,
-              'destOverride': ['http', 'tls']
-            }
-          },
-          {
-            'port': 10809,
-            'protocol': 'http',
-            'tag': 'http-in'
-          }
-        ],
-        'outbounds': [
-          {
-            'protocol': 'vmess',
-            'settings': {
-              'vnext': [
-                {
-                  'address': json['add'],
-                  'port': int.parse(json['port'].toString()),
-                  'users': [
-                    {
-                      'id': json['id'],
-                      'alterId': int.parse(json['aid']?.toString() ?? '0'),
-                      'security': json['scy'] ?? 'auto',
-                    }
-                  ]
-                }
-              ]
-            },
-            'streamSettings': {
-              'network': json['net'] ?? 'tcp',
-              'security': json['tls'] ?? 'none',
-            },
-            'tag': 'proxy'
-          },
-          {
-            'protocol': 'freedom',
-            'tag': 'direct'
-          },
-          {
-            'protocol': 'blackhole',
-            'tag': 'block'
-          }
-        ],
-        'routing': {
-          'domainStrategy': 'AsIs',
-          'rules': [
-            {
-              'type': 'field',
-              'ip': ['geoip:private'],
-              'outboundTag': 'direct'
-            },
-            {
-              'type': 'field',
-              'domain': ['geosite:cn'],
-              'outboundTag': 'direct'
-            }
-          ]
+        {
+          'protocol': 'freedom',
+          'tag': 'direct'
+        },
+        {
+          'protocol': 'blackhole',
+          'tag': 'block'
         }
-      };
+      ];
       
       return VpnConfig(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -282,79 +257,40 @@ class SubscriptionParser {
       
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
-      final config = {
-        'log': {'loglevel': 'warning'},
-        'dns': {
-          'servers': [
-            '8.8.8.8',
-            '8.8.4.4',
-            '1.1.1.1',
-            'localhost'
-          ]
-        },
-        'inbounds': [
-          {
-            'port': 10808,
-            'protocol': 'socks',
-            'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in',
-            'sniffing': {
-              'enabled': true,
-              'destOverride': ['http', 'tls']
-            }
-          },
-          {
-            'port': 10809,
-            'protocol': 'http',
-            'tag': 'http-in'
-          }
-        ],
-        'outbounds': [
-          {
-            'protocol': 'trojan',
-            'settings': {
-              'servers': [
-                {
-                  'address': address,
-                  'port': port,
-                  'password': password,
-                }
-              ]
-            },
-            'streamSettings': {
-              'network': params['type'] ?? 'tcp',
-              'security': 'tls',
-              'tlsSettings': {
-                'serverName': params['sni'] ?? address,
+      final config = _createBaseConfig();
+      
+      // Добавляем Trojan outbound
+      config['outbounds'] = [
+        {
+          'protocol': 'trojan',
+          'settings': {
+            'servers': [
+              {
+                'address': address,
+                'port': port,
+                'password': password,
               }
-            },
-            'tag': 'proxy'
+            ]
           },
-          {
-            'protocol': 'freedom',
-            'tag': 'direct'
-          },
-          {
-            'protocol': 'blackhole',
-            'tag': 'block'
-          }
-        ],
-        'routing': {
-          'domainStrategy': 'AsIs',
-          'rules': [
-            {
-              'type': 'field',
-              'ip': ['geoip:private'],
-              'outboundTag': 'direct'
-            },
-            {
-              'type': 'field',
-              'domain': ['geosite:cn'],
-              'outboundTag': 'direct'
+          'streamSettings': {
+            'network': params['type'] ?? 'tcp',
+            'security': 'tls',
+            'tlsSettings': {
+              'serverName': params['sni'] ?? address,
+              'allowInsecure': params['allowInsecure'] == '1',
             }
-          ]
+          },
+          'tag': 'proxy'
+        },
+        {
+          'protocol': 'freedom',
+          'tag': 'direct'
+        },
+        {
+          'protocol': 'blackhole',
+          'tag': 'block'
         }
-      };
+      ];
       
       return VpnConfig(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -380,73 +316,33 @@ class SubscriptionParser {
       
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
-      final config = {
-        'log': {'loglevel': 'warning'},
-        'dns': {
-          'servers': [
-            '8.8.8.8',
-            '8.8.4.4',
-            '1.1.1.1',
-            'localhost'
-          ]
+      final config = _createBaseConfig();
+      
+      // Добавляем Shadowsocks outbound
+      config['outbounds'] = [
+        {
+          'protocol': 'shadowsocks',
+          'settings': {
+            'servers': [
+              {
+                'address': address,
+                'port': port,
+                'method': method,
+                'password': password,
+              }
+            ]
+          },
+          'tag': 'proxy'
         },
-        'inbounds': [
-          {
-            'port': 10808,
-            'protocol': 'socks',
-            'settings': {'auth': 'noauth', 'udp': true},
-            'tag': 'socks-in',
-            'sniffing': {
-              'enabled': true,
-              'destOverride': ['http', 'tls']
-            }
-          },
-          {
-            'port': 10809,
-            'protocol': 'http',
-            'tag': 'http-in'
-          }
-        ],
-        'outbounds': [
-          {
-            'protocol': 'shadowsocks',
-            'settings': {
-              'servers': [
-                {
-                  'address': address,
-                  'port': port,
-                  'method': method,
-                  'password': password,
-                }
-              ]
-            },
-            'tag': 'proxy'
-          },
-          {
-            'protocol': 'freedom',
-            'tag': 'direct'
-          },
-          {
-            'protocol': 'blackhole',
-            'tag': 'block'
-          }
-        ],
-        'routing': {
-          'domainStrategy': 'AsIs',
-          'rules': [
-            {
-              'type': 'field',
-              'ip': ['geoip:private'],
-              'outboundTag': 'direct'
-            },
-            {
-              'type': 'field',
-              'domain': ['geosite:cn'],
-              'outboundTag': 'direct'
-            }
-          ]
+        {
+          'protocol': 'freedom',
+          'tag': 'direct'
+        },
+        {
+          'protocol': 'blackhole',
+          'tag': 'block'
         }
-      };
+      ];
       
       return VpnConfig(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -456,48 +352,6 @@ class SubscriptionParser {
       );
     } catch (e) {
       print('Error parsing shadowsocks URL: $e');
-      return null;
-    }
-  }
-
-  VpnConfig? parseHysteria2Url(String url) {
-    try {
-      // hysteria2://password@address:port?sni=example.com#name
-      final uri = Uri.parse(url);
-      final password = uri.userInfo;
-      final address = uri.host;
-      final port = uri.port;
-      final params = uri.queryParameters;
-      
-      final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
-      
-      final config = {
-        'server': '$address:$port',
-        'auth': password,
-        'tls': {
-          'sni': params['sni'] ?? address,
-          'insecure': params['insecure'] == '1',
-        },
-        'bandwidth': {
-          'up': params['up'] ?? '100 mbps',
-          'down': params['down'] ?? '100 mbps',
-        },
-        'socks5': {
-          'listen': '127.0.0.1:10808'
-        },
-        'http': {
-          'listen': '127.0.0.1:10809'
-        }
-      };
-      
-      return VpnConfig(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        coreType: CoreType.hysteria2,
-        config: config,
-      );
-    } catch (e) {
-      print('Error parsing hysteria2 URL: $e');
       return null;
     }
   }

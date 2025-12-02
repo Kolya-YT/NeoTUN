@@ -157,8 +157,6 @@
   "coreUninstallFailed": "Не удалось удалить ядро",
   "confirmUninstall": "Вы уверены, что хотите удалить это ядро?",
   "xray": "Xray",
-  "singbox": "sing-box",
-  "hysteria2": "Hysteria2",
   "connectionLogs": "Логи подключения",
   "viewLogs": "Просмотр логов",
   "clearLogs": "Очистить логи",

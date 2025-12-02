@@ -1040,18 +1040,6 @@ abstract class AppLocalizations {
   /// **'Xray'**
   String get xray;
 
-  /// No description provided for @singbox.
-  ///
-  /// In en, this message translates to:
-  /// **'sing-box'**
-  String get singbox;
-
-  /// No description provided for @hysteria2.
-  ///
-  /// In en, this message translates to:
-  /// **'Hysteria2'**
-  String get hysteria2;
-
   /// No description provided for @connectionLogs.
   ///
   /// In en, this message translates to:
