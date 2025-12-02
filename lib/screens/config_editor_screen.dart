@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import '../l10n/app_localizations.dart';
 import '../models/vpn_config.dart';
 import '../models/core_type.dart';
 import '../services/config_storage.dart';
@@ -34,7 +35,7 @@ class _ConfigEditorScreenState extends State<ConfigEditorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.config == null ? 'New Config' : 'Edit Config'),
+        title: Text(widget.config == null ? AppLocalizations.of(context)!.addConfig : AppLocalizations.of(context)!.editConfig),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
@@ -48,12 +49,12 @@ class _ConfigEditorScreenState extends State<ConfigEditorScreen> {
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Config Name'),
+              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.configName),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<CoreType>(
               value: _selectedCore,
-              decoration: const InputDecoration(labelText: 'Core Type'),
+              decoration: InputDecoration(labelText: AppLocalizations.of(context)!.coreType),
               items: CoreType.values.map((core) {
                 return DropdownMenuItem(
                   value: core,
@@ -66,9 +67,9 @@ class _ConfigEditorScreenState extends State<ConfigEditorScreen> {
             Expanded(
               child: TextField(
                 controller: _configController,
-                decoration: const InputDecoration(
-                  labelText: 'JSON Config',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.jsonConfig,
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: null,
                 expands: true,
@@ -96,7 +97,7 @@ class _ConfigEditorScreenState extends State<ConfigEditorScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.error}: $e')),
         );
       }
     }

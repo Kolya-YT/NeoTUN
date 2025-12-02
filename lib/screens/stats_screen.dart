@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/traffic_stats.dart';
 
 class StatsScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Statistics'),
+        title: Text(AppLocalizations.of(context)!.statistics),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -39,23 +40,23 @@ class _StatsScreenState extends State<StatsScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _buildStatsCard(
-                'Current Session',
+                AppLocalizations.of(context)!.currentSession,
                 [
                   _buildStatRow(
                     Icons.upload,
-                    'Upload',
+                    AppLocalizations.of(context)!.upload,
                     TrafficStats.instance.formatBytes(sessionUpload),
                     Colors.blue,
                   ),
                   _buildStatRow(
                     Icons.download,
-                    'Download',
+                    AppLocalizations.of(context)!.download,
                     TrafficStats.instance.formatBytes(sessionDownload),
                     Colors.green,
                   ),
                   _buildStatRow(
                     Icons.timer,
-                    'Duration',
+                    AppLocalizations.of(context)!.duration,
                     TrafficStats.instance.formatDuration(duration),
                     Colors.orange,
                   ),
@@ -64,23 +65,23 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
               const SizedBox(height: 16),
               _buildStatsCard(
-                'Total Statistics',
+                AppLocalizations.of(context)!.totalStatistics,
                 [
                   _buildStatRow(
                     Icons.upload,
-                    'Total Upload',
+                    AppLocalizations.of(context)!.totalUpload,
                     TrafficStats.instance.formatBytes(totalUpload),
                     Colors.blue,
                   ),
                   _buildStatRow(
                     Icons.download,
-                    'Total Download',
+                    AppLocalizations.of(context)!.totalDownload,
                     TrafficStats.instance.formatBytes(totalDownload),
                     Colors.green,
                   ),
                   _buildStatRow(
                     Icons.swap_vert,
-                    'Total Traffic',
+                    AppLocalizations.of(context)!.totalTraffic,
                     TrafficStats.instance.formatBytes(totalUpload + totalDownload),
                     Colors.purple,
                   ),
@@ -156,17 +157,17 @@ class _StatsScreenState extends State<StatsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Statistics'),
-        content: const Text('Are you sure you want to reset all statistics?'),
+        title: Text(AppLocalizations.of(context)!.resetStatistics),
+        content: Text(AppLocalizations.of(context)!.resetConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Reset'),
+            child: Text(AppLocalizations.of(context)!.reset),
           ),
         ],
       ),
@@ -176,7 +177,7 @@ class _StatsScreenState extends State<StatsScreen> {
       await TrafficStats.instance.resetTotal();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Statistics reset successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.statisticsReset)),
         );
       }
     }
