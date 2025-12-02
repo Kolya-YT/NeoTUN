@@ -105,9 +105,9 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[50],
-        cardTheme: CardThemeData(
+        cardTheme: const CardThemeData(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
           color: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -139,10 +139,10 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardTheme: CardThemeData(
+        cardTheme: const CardThemeData(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          color: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+          color: Color(0xFF1E293B),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
