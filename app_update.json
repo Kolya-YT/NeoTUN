@@ -1,14 +1,14 @@
 {
-  "latest_version": "1.2.2-beta.16",
-  "notes": "Release 1.2.2-beta.16",
+  "latest_version": "1.2.2-beta.17",
+  "notes": "Release 1.2.2-beta.17",
   "platforms": {
     "windows-x64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.16/NeoTUN-Windows-x64.zip",
-      "sha256": "0a4c32a374a5201cf871fb186d30d94ae47f97070b1db0071162363570e3ca0e"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.17/NeoTUN-Windows-x64.zip",
+      "sha256": ""
     },
     "android-arm64": {
-      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.16/app-arm64-v8a-release.apk",
-      "sha256": "138dbb8f41e467af3d39157e0bc87e53a5ad6257971ccbdf780a17d5b176c7b8"
+      "url": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.17/app-arm64-v8a-release.apk",
+      "sha256": ""
     }
   }
 }
