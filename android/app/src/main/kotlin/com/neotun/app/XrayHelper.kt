@@ -1,12 +1,10 @@
 package com.neotun.app
 
 import android.util.Log
-import libv2ray.Libv2ray
-import libv2ray.CoreController
 
 /**
  * XrayHelper - обертка для libv2ray.aar
- * Использует CoreController из AndroidLibXrayLite
+ * Использует JNI методы напрямую через System.loadLibrary
  * 
  * Основано на: https://github.com/2dust/v2rayNG
  * Использует: https://github.com/2dust/AndroidLibXrayLite
@@ -14,11 +12,21 @@ import libv2ray.CoreController
 object XrayHelper {
     
     private const val TAG = "XrayHelper"
-    private var coreController: CoreController? = null
     private var isRunning = false
+    
+    init {
+        try {
+            // Загружаем нативную библиотеку
+            System.loadLibrary("gojni")
+            Log.i(TAG, "✓ Native library loaded")
+        } catch (e: Exception) {
+            Log.e(TAG, "✗ Failed to load native library: ${e.message}", e)
+        }
+    }
     
     /**
      * Запускает Xray с указанной конфигурацией
+     * Использует JNI метод напрямую
      */
     fun runXray(configPath: String, assetPath: String, fd: Int): Int {
         return try {
@@ -35,23 +43,17 @@ object XrayHelper {
             val configContent = configFile.readText()
             Log.d(TAG, "Config size: ${configContent.length} bytes")
             
-            // Создаем CoreController если еще не создан
-            if (coreController == null) {
-                coreController = Libv2ray.newCoreController()
-                Log.d(TAG, "CoreController created")
-            }
+            // Запускаем через JNI
+            val result = startV2Ray(configContent, assetPath, fd)
             
-            // Запускаем Xray через CoreController
-            val result = coreController?.startXray(configContent, assetPath, fd.toLong())
-            
-            if (result == 0L) {
+            if (result == 0) {
                 isRunning = true
                 Log.i(TAG, "✓ Xray started successfully")
-                return 0
             } else {
                 Log.e(TAG, "✗ Xray failed with code: $result")
-                return result?.toInt() ?: -1
             }
+            
+            result
             
         } catch (e: Exception) {
             Log.e(TAG, "Error running Xray: ${e.message}", e)
@@ -65,9 +67,9 @@ object XrayHelper {
      */
     fun stopXray(): Int {
         return try {
-            if (isRunning && coreController != null) {
+            if (isRunning) {
                 Log.i(TAG, "Stopping Xray...")
-                coreController?.stopXray()
+                stopV2Ray()
                 isRunning = false
                 Log.i(TAG, "✓ Xray stopped")
             }
@@ -83,10 +85,15 @@ object XrayHelper {
      */
     fun xrayVersion(): String {
         return try {
-            Libv2ray.xrayVersion() ?: "Unknown"
+            getVersion()
         } catch (e: Exception) {
             Log.e(TAG, "Error getting version: ${e.message}", e)
             "Unknown"
         }
     }
+    
+    // JNI методы
+    private external fun startV2Ray(config: String, assetPath: String, fd: Int): Int
+    private external fun stopV2Ray(): Int
+    private external fun getVersion(): String
 }
