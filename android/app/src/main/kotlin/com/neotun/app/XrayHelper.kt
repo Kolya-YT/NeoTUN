@@ -1,10 +1,12 @@
 package com.neotun.app
 
 import android.util.Log
+import libv2ray.Libv2ray
+import libv2ray.CoreController
 
 /**
- * XrayHelper - обертка для libxray.so
- * Архитектура как в v2rayNG - прямой вызов JNI методов
+ * XrayHelper - обертка для libv2ray.aar
+ * Использует CoreController из AndroidLibXrayLite
  * 
  * Основано на: https://github.com/2dust/v2rayNG
  * Использует: https://github.com/2dust/AndroidLibXrayLite
@@ -12,38 +14,49 @@ import android.util.Log
 object XrayHelper {
     
     private const val TAG = "XrayHelper"
-    private var isLibraryLoaded = false
-    
-    init {
-        try {
-            // libv2ray.aar использует имя "v2ray", а не "xray"
-            System.loadLibrary("v2ray")
-            isLibraryLoaded = true
-            Log.i(TAG, "✓ libv2ray.so loaded successfully")
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "✗ Failed to load libv2ray.so: ${e.message}", e)
-            isLibraryLoaded = false
-        }
-    }
+    private var coreController: CoreController? = null
+    private var isRunning = false
     
     /**
      * Запускает Xray с указанной конфигурацией
      */
     fun runXray(configPath: String, assetPath: String, fd: Int): Int {
-        if (!isLibraryLoaded) {
-            Log.e(TAG, "Library not loaded, cannot run Xray")
-            return -1
-        }
-        
         return try {
             Log.i(TAG, "Starting Xray: config=$configPath, assets=$assetPath, fd=$fd")
-            runXrayNative(configPath, assetPath, fd)
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Native method not found: ${e.message}", e)
-            -2
+            
+            // Проверяем файл конфигурации
+            val configFile = java.io.File(configPath)
+            if (!configFile.exists()) {
+                Log.e(TAG, "Config file not found: $configPath")
+                return -1
+            }
+            
+            // Читаем конфигурацию
+            val configContent = configFile.readText()
+            Log.d(TAG, "Config size: ${configContent.length} bytes")
+            
+            // Создаем CoreController если еще не создан
+            if (coreController == null) {
+                coreController = Libv2ray.newCoreController()
+                Log.d(TAG, "CoreController created")
+            }
+            
+            // Запускаем Xray через CoreController
+            val result = coreController?.startXray(configContent, assetPath, fd.toLong())
+            
+            if (result == 0L) {
+                isRunning = true
+                Log.i(TAG, "✓ Xray started successfully")
+                return 0
+            } else {
+                Log.e(TAG, "✗ Xray failed with code: $result")
+                return result?.toInt() ?: -1
+            }
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error running Xray: ${e.message}", e)
-            -3
+            e.printStackTrace()
+            -1
         }
     }
     
@@ -51,17 +64,17 @@ object XrayHelper {
      * Останавливает Xray
      */
     fun stopXray(): Int {
-        if (!isLibraryLoaded) {
-            Log.w(TAG, "Library not loaded, nothing to stop")
-            return 0
-        }
-        
         return try {
-            Log.i(TAG, "Stopping Xray...")
-            stopXrayNative()
+            if (isRunning && coreController != null) {
+                Log.i(TAG, "Stopping Xray...")
+                coreController?.stopXray()
+                isRunning = false
+                Log.i(TAG, "✓ Xray stopped")
+            }
+            0
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping Xray: ${e.message}", e)
-            0 // Не критично если не удалось остановить
+            0
         }
     }
     
@@ -69,25 +82,11 @@ object XrayHelper {
      * Получает версию Xray
      */
     fun xrayVersion(): String {
-        if (!isLibraryLoaded) {
-            return "Library not loaded"
-        }
-        
         return try {
-            xrayVersionNative()
+            Libv2ray.xrayVersion() ?: "Unknown"
         } catch (e: Exception) {
             Log.e(TAG, "Error getting version: ${e.message}", e)
             "Unknown"
         }
     }
-    
-    // Native методы
-    @JvmStatic
-    private external fun runXrayNative(configPath: String, assetPath: String, fd: Int): Int
-    
-    @JvmStatic
-    private external fun stopXrayNative(): Int
-    
-    @JvmStatic
-    private external fun xrayVersionNative(): String
 }

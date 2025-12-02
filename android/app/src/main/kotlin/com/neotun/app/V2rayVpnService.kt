@@ -67,20 +67,24 @@ class V2rayVpnService : VpnService() {
     private fun startVpn(configPath: String) {
         serviceScope.launch {
             try {
-                Log.i(TAG, "Starting VPN with config: $configPath")
+                Log.i(TAG, "=== Starting VPN ===")
+                Log.i(TAG, "Config path: $configPath")
                 
                 // Проверяем конфигурацию
                 val configFile = File(configPath)
                 if (!configFile.exists()) {
-                    Log.e(TAG, "Config file not found: $configPath")
+                    Log.e(TAG, "✗ Config file not found: $configPath")
                     stopSelf()
                     return@launch
                 }
+                Log.i(TAG, "✓ Config file exists, size: ${configFile.length()} bytes")
                 
                 // Показываем уведомление
                 startForeground(NOTIFICATION_ID, createNotification("Connecting..."))
+                Log.i(TAG, "✓ Foreground notification shown")
                 
                 // Настраиваем VPN интерфейс как в v2rayNG
+                Log.i(TAG, "Building VPN interface...")
                 val builder = Builder()
                     .setSession("NeoTUN")
                     .setMtu(1500)
@@ -94,15 +98,17 @@ class V2rayVpnService : VpnService() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     try {
                         builder.addDisallowedApplication(packageName)
+                        Log.i(TAG, "✓ App excluded from VPN")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to exclude app from VPN: ${e.message}")
+                        Log.w(TAG, "⚠ Failed to exclude app from VPN: ${e.message}")
                     }
                 }
                 
+                Log.i(TAG, "Establishing VPN interface...")
                 vpnInterface = builder.establish()
                 
                 if (vpnInterface == null) {
-                    Log.e(TAG, "Failed to establish VPN interface")
+                    Log.e(TAG, "✗ Failed to establish VPN interface - user may have denied permission")
                     stopSelf()
                     return@launch
                 }
@@ -110,8 +116,18 @@ class V2rayVpnService : VpnService() {
                 val fd = vpnInterface!!.fd
                 Log.i(TAG, "✓ VPN interface established, fd: $fd")
                 
-                // Запускаем Xray через libxray.so как в v2rayNG
+                // Защищаем сокет от VPN (важно для работы)
+                if (protect(fd)) {
+                    Log.i(TAG, "✓ Socket protected")
+                } else {
+                    Log.w(TAG, "⚠ Failed to protect socket")
+                }
+                
+                // Запускаем Xray через libv2ray как в v2rayNG
                 val assetPath = applicationContext.filesDir.absolutePath
+                Log.i(TAG, "Asset path: $assetPath")
+                Log.i(TAG, "Starting Xray core...")
+                
                 val result = withContext(Dispatchers.IO) {
                     XrayHelper.runXray(configPath, assetPath, fd)
                 }
@@ -119,14 +135,15 @@ class V2rayVpnService : VpnService() {
                 if (result == 0) {
                     isRunning = true
                     updateNotification("Connected")
-                    Log.i(TAG, "✓ VPN started successfully")
+                    Log.i(TAG, "✓✓✓ VPN started successfully ✓✓✓")
                 } else {
-                    Log.e(TAG, "Xray failed with code: $result")
+                    Log.e(TAG, "✗✗✗ Xray failed with code: $result ✗✗✗")
                     stopVpn()
                 }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error starting VPN: ${e.message}", e)
+                Log.e(TAG, "✗✗✗ Error starting VPN: ${e.message}", e)
+                e.printStackTrace()
                 stopVpn()
             }
         }

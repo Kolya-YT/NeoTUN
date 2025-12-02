@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import '../models/vpn_config.dart';
+import 'xray_android_service.dart';
 
 /// Минималистичный сервис для работы с Xray-core
 /// Только самое необходимое для работы
@@ -15,11 +16,34 @@ class XrayService {
   final _logController = StreamController<String>.broadcast();
   
   Stream<String> get logStream => _logController.stream;
-  bool get isRunning => _process != null;
+  
+  bool get isRunning {
+    if (Platform.isAndroid) {
+      // На Android проверяем через нативный сервис
+      return _activeConfig != null;
+    }
+    return _process != null;
+  }
+  
   VpnConfig? get activeConfig => _activeConfig;
 
   /// Запустить Xray с конфигурацией
   Future<void> start(VpnConfig config) async {
+    // На Android используем VPN сервис
+    if (Platform.isAndroid) {
+      _log('Using Android VPN service...');
+      await XrayAndroidService.instance.start(config);
+      _activeConfig = config;
+      
+      // Подписываемся на логи Android сервиса
+      XrayAndroidService.instance.logStream.listen((log) {
+        _logController.add(log);
+      });
+      
+      return;
+    }
+    
+    // На других платформах используем Process
     if (_process != null) {
       await stop();
     }
@@ -46,13 +70,6 @@ class XrayService {
           xrayPath,
           ['run', '-c', configFile.path],
           runInShell: true,
-        );
-      } else if (Platform.isAndroid) {
-        // На Android запускаем через shell с правами
-        await Process.run('chmod', ['755', xrayPath]);
-        _process = await Process.start(
-          'sh',
-          ['-c', '$xrayPath run -c ${configFile.path}'],
         );
       } else {
         _process = await Process.start(
@@ -93,6 +110,14 @@ class XrayService {
 
   /// Остановить Xray
   Future<void> stop() async {
+    // На Android используем VPN сервис
+    if (Platform.isAndroid) {
+      await XrayAndroidService.instance.stop();
+      _activeConfig = null;
+      return;
+    }
+    
+    // На других платформах используем Process
     if (_process != null) {
       _log('Stopping Xray...');
       
