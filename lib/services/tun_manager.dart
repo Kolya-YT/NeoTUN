@@ -141,7 +141,7 @@ class TunManager {
   Map<String, dynamic> createSingboxTunConfig({
     required Map<String, dynamic> baseConfig,
     String tunAddress = '172.19.0.1/30',
-    List<String>? dnsServers,
+    List<Map<String, dynamic>>? dnsServers,
   }) {
     final config = Map<String, dynamic>.from(baseConfig);
     
