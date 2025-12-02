@@ -119,14 +119,20 @@ class TunVpnService : VpnService() {
 
     private fun startCore(coreType: String, configPath: String) {
         try {
+            android.util.Log.i("TunVpnService", "startCore called: coreType=$coreType, configPath=$configPath")
+            android.util.Log.i("TunVpnService", "xrayHelper is null: ${xrayHelper == null}")
+            
             // Для Xray используем нативную библиотеку
             if (coreType == "xray" && xrayHelper != null) {
                 android.util.Log.i("TunVpnService", "Using native AndroidLibXrayLite for TUN")
                 useNativeXray = true
                 
+                android.util.Log.i("TunVpnService", "Calling xrayHelper.start with config: $configPath")
                 val success = xrayHelper!!.start(configPath)
+                android.util.Log.i("TunVpnService", "xrayHelper.start returned: $success")
+                
                 if (!success) {
-                    throw Exception("Failed to start Xray via native library")
+                    throw Exception("Failed to start Xray via native library - check config file")
                 }
                 
                 android.util.Log.i("TunVpnService", "✓ Native Xray started in TUN mode")
