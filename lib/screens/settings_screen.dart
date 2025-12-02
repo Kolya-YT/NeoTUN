@@ -726,7 +726,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } else {
         // Пытаемся парсить как JSON
         try {
-          final json = jsonDecode(text);
+          jsonDecode(text); // Проверяем валидность JSON
           // Здесь можно добавить логику импорта JSON конфигурации
           if (mounted) {
             ErrorHandler.showInfo(context, 'JSON config import not yet implemented');

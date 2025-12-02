@@ -34,11 +34,7 @@ class _CoresScreenState extends State<CoresScreen> {
       _versions[CoreType.xray] = await XrayDownloader.instance.getInstalledVersion();
     }
     
-    // Для Android также проверяем libxray
-    if (Platform.isAndroid) {
-      final libxrayInstalled = await LibxrayDownloader.instance.isInstalled();
-      // libxray проверка убрана - устанавливается автоматически через AAR
-    }
+    // Для Android libxray устанавливается автоматически через AAR в build.gradle
     
     setState(() => _loading = false);
   }
