@@ -2,7 +2,9 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.2.2--beta.4-blue)
+<img src="assets/images/logo.png" alt="NeoTUN Logo" width="120" height="120" />
+
+![Version](https://img.shields.io/badge/version-v1.2.2--beta.6-blue)
 ![Beta](https://img.shields.io/badge/beta-testing-orange)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.0-02569B?logo=flutter)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE.txt)
@@ -14,6 +16,18 @@
 [Скачать](https://github.com/Kolya-YT/NeoTUN/releases) • [Сообщить об ошибке](https://github.com/Kolya-YT/NeoTUN/issues)
 
 </div>
+
+## 🎨 Что нового в v1.2.2-beta.5
+
+### Новый дизайн
+- ✨ **Пользовательский логотип** - ваш логотип теперь в AppBar и Splash Screen
+- 🌟 **Splash Screen** - красивый экран загрузки с анимацией
+- 🎨 **Улучшенная цветовая схема** - современные градиенты Indigo → Purple
+- 💎 **Material Design 3** - более профессиональный вид
+
+### Исправления
+- ✅ **Android компиляция** - исправлены все ошибки в MainActivity.kt
+- ✅ **Стабильность** - улучшена работа VPN сервиса
 
 ## Возможности
 

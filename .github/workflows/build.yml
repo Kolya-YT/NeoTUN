@@ -47,7 +47,7 @@ jobs:
         run: flutter build apk --release --split-per-abi
       
       - name: Upload APK artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: neotun-android
           path: build/app/outputs/flutter-apk/*.apk
@@ -63,7 +63,7 @@ jobs:
       - run: flutter gen-l10n
       - run: flutter build windows --release
       - run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath neotun-windows.zip
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: neotun-windows
           path: neotun-windows.zip
@@ -72,7 +72,7 @@ jobs:
     needs: [build-android, build-windows]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
       - uses: softprops/action-gh-release@v1
         with:
           files: |

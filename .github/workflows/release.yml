@@ -101,6 +101,7 @@ jobs:
           name: android-apk
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 7
+          compression-level: 0
 
   build-windows:
     name: Build Windows EXE
@@ -137,6 +138,7 @@ jobs:
           name: windows-exe
           path: NeoTUN-Windows-x64.zip
           retention-days: 7
+          compression-level: 0
 
   create-release:
     name: Create GitHub Release

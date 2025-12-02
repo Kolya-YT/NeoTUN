@@ -68,11 +68,9 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun startVpnService(corePath: String, configPath: String, args: List<String>) {
-        val intent = Intent(this, VpnService::class.java).apply {
-            action = VpnService.ACTION_START
-            putExtra(VpnService.EXTRA_CORE_PATH, corePath)
-            putExtra(VpnService.EXTRA_CONFIG_PATH, configPath)
-            putExtra(VpnService.EXTRA_ARGS, args.toTypedArray())
+        val intent = Intent(this, V2rayVpnService::class.java).apply {
+            action = V2rayVpnService.ACTION_START
+            putExtra(V2rayVpnService.EXTRA_CONFIG_PATH, configPath)
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -83,8 +81,8 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun stopVpnService() {
-        val intent = Intent(this, VpnService::class.java).apply {
-            action = VpnService.ACTION_STOP
+        val intent = Intent(this, V2rayVpnService::class.java).apply {
+            action = V2rayVpnService.ACTION_STOP
         }
         startService(intent)
     }

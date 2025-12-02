@@ -92,13 +92,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.vpn_lock, size: 24),
+                  );
+                },
               ),
-              child: const Icon(Icons.vpn_lock, size: 24),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -795,22 +806,22 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         gradient: isActive
-            ? LinearGradient(
+            ? const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.blue.shade400,
-                  Colors.purple.shade400,
+                  Color(0xFF6366F1), // Indigo
+                  Color(0xFF8B5CF6), // Purple
                 ],
               )
             : null,
-        color: isActive ? null : (isDark ? Colors.grey.shade800 : Colors.white),
+        color: isActive ? null : (isDark ? const Color(0xFF1E293B) : Colors.white),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isActive ? Colors.blue : Colors.grey).withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: (isActive ? const Color(0xFF6366F1) : Colors.grey).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),

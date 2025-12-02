@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/qr_scanner_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/core_manager.dart';
 import 'services/config_storage.dart';
 import 'services/update_service.dart';
@@ -98,11 +99,18 @@ class NeoTunApp extends StatefulWidget {
 class _NeoTunAppState extends State<NeoTunApp> {
   ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale('en');
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+  }
+  
+  void _completeInitialization() {
+    setState(() {
+      _isInitialized = true;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -164,11 +172,12 @@ class _NeoTunAppState extends State<NeoTunApp> {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.grey[50],
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         cardColor: Colors.white,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            elevation: 0,
+            elevation: 2,
+            shadowColor: Colors.black26,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
@@ -219,10 +228,12 @@ class _NeoTunAppState extends State<NeoTunApp> {
           backgroundColor: Color(0xFF0F172A),
         ),
       ),
-      home: HomeScreen(
-        onThemeChanged: updateThemeMode,
-        onLocaleChanged: updateLocale,
-      ),
+      home: _isInitialized 
+          ? HomeScreen(
+              onThemeChanged: updateThemeMode,
+              onLocaleChanged: updateLocale,
+            )
+          : SplashScreen(onInitComplete: _completeInitialization),
       routes: {
         '/qr_scanner': (context) => const QRScannerScreen(),
       },
