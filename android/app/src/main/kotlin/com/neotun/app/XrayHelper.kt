@@ -12,57 +12,82 @@ import android.util.Log
 object XrayHelper {
     
     private const val TAG = "XrayHelper"
+    private var isLibraryLoaded = false
     
     init {
         try {
-            System.loadLibrary("xray")
-            Log.i(TAG, "✓ libxray.so loaded successfully")
+            // libv2ray.aar использует имя "v2ray", а не "xray"
+            System.loadLibrary("v2ray")
+            isLibraryLoaded = true
+            Log.i(TAG, "✓ libv2ray.so loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "✗ Failed to load libxray.so", e)
+            Log.e(TAG, "✗ Failed to load libv2ray.so: ${e.message}", e)
+            isLibraryLoaded = false
         }
     }
     
     /**
      * Запускает Xray с указанной конфигурацией
-     * 
-     * @param configPath путь к файлу конфигурации
-     * @param assetPath путь к директории assets
-     * @param fd file descriptor VPN интерфейса
-     * @return 0 при успехе, иначе код ошибки
      */
-    @JvmStatic
-    external fun runXray(configPath: String, assetPath: String, fd: Int): Int
+    fun runXray(configPath: String, assetPath: String, fd: Int): Int {
+        if (!isLibraryLoaded) {
+            Log.e(TAG, "Library not loaded, cannot run Xray")
+            return -1
+        }
+        
+        return try {
+            Log.i(TAG, "Starting Xray: config=$configPath, assets=$assetPath, fd=$fd")
+            runXrayNative(configPath, assetPath, fd)
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Native method not found: ${e.message}", e)
+            -2
+        } catch (e: Exception) {
+            Log.e(TAG, "Error running Xray: ${e.message}", e)
+            -3
+        }
+    }
     
     /**
      * Останавливает Xray
-     * 
-     * @return 0 при успехе, иначе код ошибки
      */
-    @JvmStatic
-    external fun stopXray(): Int
+    fun stopXray(): Int {
+        if (!isLibraryLoaded) {
+            Log.w(TAG, "Library not loaded, nothing to stop")
+            return 0
+        }
+        
+        return try {
+            Log.i(TAG, "Stopping Xray...")
+            stopXrayNative()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping Xray: ${e.message}", e)
+            0 // Не критично если не удалось остановить
+        }
+    }
     
     /**
      * Получает версию Xray
-     * 
-     * @return строка с версией
      */
-    @JvmStatic
-    external fun xrayVersion(): String
+    fun xrayVersion(): String {
+        if (!isLibraryLoaded) {
+            return "Library not loaded"
+        }
+        
+        return try {
+            xrayVersionNative()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting version: ${e.message}", e)
+            "Unknown"
+        }
+    }
     
-    /**
-     * Тестирует конфигурацию
-     * 
-     * @param configPath путь к файлу конфигурации
-     * @return 0 если конфигурация валидна, иначе код ошибки
-     */
+    // Native методы
     @JvmStatic
-    external fun testConfig(configPath: String): Int
+    private external fun runXrayNative(configPath: String, assetPath: String, fd: Int): Int
     
-    /**
-     * Получает статистику трафика
-     * 
-     * @return JSON строка со статистикой
-     */
     @JvmStatic
-    external fun queryStats(): String
+    private external fun stopXrayNative(): Int
+    
+    @JvmStatic
+    private external fun xrayVersionNative(): String
 }

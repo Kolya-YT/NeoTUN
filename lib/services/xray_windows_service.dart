@@ -47,8 +47,6 @@ class XrayWindowsService {
       _log('Config file: ${configFile.path}');
 
       // Запускаем xray.exe как в v2rayN
-      _log('Executing: $xrayPath run -c ${configFile.path}');
-      
       _process = await Process.start(
         xrayPath,
         ['run', '-c', configFile.path],
@@ -56,65 +54,44 @@ class XrayWindowsService {
       );
 
       _activeConfig = config;
-      _log('✓ Xray process started (PID: ${_process!.pid})');
+      _log('✓ Xray process started');
 
       // Слушаем вывод
       _process!.stdout.transform(utf8.decoder).listen((data) {
         for (final line in data.split('\n')) {
           if (line.trim().isNotEmpty) {
-            _log('[STDOUT] $line');
+            _log('[Xray] $line');
           }
         }
-      }, onError: (error) {
-        _log('[STDOUT ERROR] $error');
       });
 
       _process!.stderr.transform(utf8.decoder).listen((data) {
         for (final line in data.split('\n')) {
           if (line.trim().isNotEmpty) {
-            _log('[STDERR] $line');
+            _log('[Xray ERROR] $line');
           }
         }
-      }, onError: (error) {
-        _log('[STDERR ERROR] $error');
       });
 
       // Проверяем что процесс запустился
-      _log('Waiting for process initialization...');
       await Future.delayed(const Duration(milliseconds: 500));
       
       // Проверяем exitCode - если процесс уже завершился, будет доступен
       final exitCodeFuture = _process!.exitCode;
-      final timeoutFuture = Future.delayed(const Duration(seconds: 3));
+      final timeoutFuture = Future.delayed(const Duration(seconds: 2));
       
-      _log('Checking process status...');
       final result = await Future.any([exitCodeFuture, timeoutFuture]);
       
       if (result is int) {
         // Процесс завершился с ошибкой
-        _log('❌ Process terminated with exit code: $result');
-        _log('Config file location: ${configFile.path}');
-        _log('Xray path: $xrayPath');
-        
-        // Читаем конфиг для логирования
-        try {
-          final configContent = await configFile.readAsString();
-          _log('Configuration used:');
-          _log(configContent);
-        } catch (e) {
-          _log('Failed to read config: $e');
-        }
-        
         _process = null;
         _activeConfig = null;
-        throw Exception('Xray process terminated with exit code: $result\n\nPossible causes:\n- Invalid configuration\n- Missing Xray core\n- Port already in use\n\nCheck logs above for details.');
+        throw Exception('Xray process terminated with exit code: $result\nCheck configuration and Xray installation.');
       }
-      
-      _log('✓ Process is running');
       
       // Процесс работает, настраиваем обработчик завершения
       _process!.exitCode.then((code) {
-        _log('⚠ Xray exited with code: $code');
+        _log('Xray exited with code: $code');
         _process = null;
         _activeConfig = null;
         _statsTimer?.cancel();
@@ -126,9 +103,8 @@ class XrayWindowsService {
       _log('✓ Xray started successfully');
 
     } catch (e, stack) {
-      _log('❌ Failed to start Xray: $e');
-      _log('Stack trace:');
-      _log(stack.toString());
+      _log('Failed to start Xray: $e');
+      _log('Stack: $stack');
       _process = null;
       _activeConfig = null;
       rethrow;
@@ -164,21 +140,7 @@ class XrayWindowsService {
   /// Получить путь к xray.exe
   Future<String> _getXrayPath() async {
     final currentDir = Directory.current;
-    final xrayPath = '${currentDir.path}\\cores\\xray.exe';
-    _log('Xray path: $xrayPath');
-    _log('Current directory: ${currentDir.path}');
-    
-    // Проверяем существование
-    final exists = await File(xrayPath).exists();
-    _log('Xray exists: $exists');
-    
-    if (exists) {
-      final stat = await File(xrayPath).stat();
-      _log('Xray file size: ${stat.size} bytes');
-      _log('Xray modified: ${stat.modified}');
-    }
-    
-    return xrayPath;
+    return '${currentDir.path}\\cores\\xray.exe';
   }
 
   /// Создать временный файл конфигурации
@@ -186,15 +148,12 @@ class XrayWindowsService {
     final tempDir = await getTemporaryDirectory();
     final configFile = File('${tempDir.path}\\xray_config.json');
     
-    _log('Creating config file: ${configFile.path}');
-    
     // Добавляем базовые настройки если их нет
     final finalConfig = _ensureBasicConfig(config);
     
-    final configJson = const JsonEncoder.withIndent('  ').convert(finalConfig);
-    await configFile.writeAsString(configJson);
-    
-    _log('Config file created (${configJson.length} bytes)');
+    await configFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(finalConfig),
+    );
     
     return configFile;
   }
