@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.2-beta.2] - 2024-12-02
+
+### Added
+- **Comprehensive Logging**: Detailed logs for debugging startup issues
+- **Global Error Handlers**: Catch all Flutter and async errors
+- **TUN Mode Support**: Full TUN mode integration for Android and Windows
+
+### Fixed
+- Startup crash issues with detailed error tracking
+- TUN mode not being used on Android
+- Missing error handling in initialization
+
+### Improved
+- CoreManager initialization with fallback directories
+- ConfigStorage initialization with better error messages
+- All services now log their initialization status
+
 ## [1.2.2-beta.1] - 2024-12-02
 
 ### Major Changes

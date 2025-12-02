@@ -1,27 +1,13 @@
 {
-  "version": "1.2.1-beta.3",
-  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.1-beta.3/NeoTUN-Windows-x64.zip",
-  "changelog": "Beta 1.2.1-beta.3: CRITICAL FIX - Resolved 'Connected but no internet' issue with proper DNS and routing configuration",
+  "version": "1.2.2-beta.2",
+  "downloadUrl": "https://github.com/Kolya-YT/NeoTUN/releases/download/v1.2.2-beta.2/NeoTUN-Windows-x64.zip",
+  "changelog": "Beta 1.2.2-beta.2: Complete Xray rewrite - Removed sing-box and Hysteria2, only Xray core with full TUN support and comprehensive logging",
   "cores": {
     "xray": {
-      "version": "1.8.7",
+      "version": "1.8.24",
       "downloadUrls": {
-        "windows": "https://github.com/XTLS/Xray-core/releases/download/v1.8.7/Xray-windows-64.zip",
-        "android": "https://github.com/XTLS/Xray-core/releases/download/v1.8.7/Xray-android-arm64-v8a.zip"
-      }
-    },
-    "singbox": {
-      "version": "1.8.0",
-      "downloadUrls": {
-        "windows": "https://github.com/SagerNet/sing-box/releases/download/v1.8.0/sing-box-1.8.0-windows-amd64.zip",
-        "android": "https://github.com/SagerNet/sing-box/releases/download/v1.8.0/sing-box-1.8.0-android-arm64.zip"
-      }
-    },
-    "hysteria2": {
-      "version": "2.2.0",
-      "downloadUrls": {
-        "windows": "https://github.com/apernet/hysteria/releases/download/app/v2.2.0/hysteria-windows-amd64.exe",
-        "android": "https://github.com/apernet/hysteria/releases/download/app/v2.2.0/hysteria-android-arm64"
+        "windows": "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip",
+        "android": "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-android-arm64-v8a.zip"
       }
     }
   }
