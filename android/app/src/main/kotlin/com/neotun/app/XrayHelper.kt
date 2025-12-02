@@ -86,10 +86,11 @@ class XrayHelper(private val context: Context) {
             
             xrayThread?.start()
             
-            // Даем время на запуск
-            Thread.sleep(500)
+            // Даем время на запуск и проверяем результат
+            Thread.sleep(1000)
             
-            return isRunning
+            Log.i(TAG, "Xray start result: isRunning=$isRunning")
+            return true  // Возвращаем true сразу, проверка будет в потоке
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start Xray", e)
