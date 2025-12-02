@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'screens/qr_scanner_screen.dart';
@@ -7,7 +6,6 @@ import 'services/core_manager.dart';
 import 'services/config_storage.dart';
 import 'services/update_service.dart';
 import 'services/traffic_stats.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,11 +104,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[50],
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-          color: Colors.white,
-        ),
+        cardColor: Colors.white,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
@@ -140,11 +134,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-          color: Color(0xFF1E293B),
-        ),
+        cardColor: const Color(0xFF1E293B),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
