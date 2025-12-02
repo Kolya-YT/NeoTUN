@@ -6,13 +6,25 @@
 
 ### Установка
 
-#### Вариант 1: Скачать готовый AAR
+#### Вариант 1: Автоматическая загрузка (рекомендуется)
+
+**Windows:**
+```powershell
+.\download_libxray_aar.ps1
+```
+
+**Linux/macOS:**
+```bash
+./download_libxray_aar.sh
+```
+
+#### Вариант 2: Скачать вручную
 
 1. Перейдите на https://github.com/2dust/AndroidLibXrayLite/releases
 2. Скачайте последний `libxray.aar`
 3. Поместите файл в эту директорию: `android/app/libs/libxray.aar`
 
-#### Вариант 2: Собрать самостоятельно
+#### Вариант 3: Собрать самостоятельно
 
 ```bash
 git clone https://github.com/2dust/AndroidLibXrayLite.git

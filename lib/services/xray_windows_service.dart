@@ -38,6 +38,14 @@ class XrayWindowsService {
       if (!await File(xrayPath).exists()) {
         throw Exception('Xray not found at: $xrayPath\nPlease install Xray core first.');
       }
+      
+      // Проверяем версию Xray для диагностики
+      try {
+        final versionResult = await Process.run(xrayPath, ['version']);
+        _log('Xray version check: ${versionResult.stdout.toString().split('\n').first}');
+      } catch (e) {
+        _log('Warning: Could not check Xray version: $e');
+      }
 
       // Создаём временный файл конфигурации
       final configFile = await _createConfigFile(config.config);
@@ -45,12 +53,39 @@ class XrayWindowsService {
       _log('Starting Xray...');
       _log('Xray path: $xrayPath');
       _log('Config file: ${configFile.path}');
+      
+      // Логируем конфигурацию для отладки
+      try {
+        final configContent = await configFile.readAsString();
+        _log('Config content (first 500 chars): ${configContent.substring(0, configContent.length > 500 ? 500 : configContent.length)}');
+      } catch (e) {
+        _log('Could not read config for logging: $e');
+      }
 
+      // Тестируем конфигурацию перед запуском
+      _log('Testing configuration...');
+      final testResult = await Process.run(
+        xrayPath,
+        ['test', '-c', configFile.path],
+        workingDirectory: Directory.current.path,
+      );
+      
+      if (testResult.exitCode != 0) {
+        final errorOutput = testResult.stderr.toString();
+        _log('Configuration test failed: $errorOutput');
+        throw Exception('Invalid Xray configuration:\n$errorOutput');
+      }
+      
+      _log('✓ Configuration test passed');
+      
       // Запускаем xray.exe как в v2rayN
+      _log('Command: $xrayPath run -c ${configFile.path}');
+      
       _process = await Process.start(
         xrayPath,
         ['run', '-c', configFile.path],
         runInShell: false, // Не используем shell для лучшего контроля
+        workingDirectory: Directory.current.path,
       );
 
       _activeConfig = config;
@@ -69,6 +104,8 @@ class XrayWindowsService {
         for (final line in data.split('\n')) {
           if (line.trim().isNotEmpty) {
             _log('[Xray ERROR] $line');
+            // Сохраняем последнюю ошибку для диагностики
+            print('[Xray STDERR] $line');
           }
         }
       });
@@ -151,9 +188,11 @@ class XrayWindowsService {
     // Добавляем базовые настройки если их нет
     final finalConfig = _ensureBasicConfig(config);
     
-    await configFile.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(finalConfig),
-    );
+    // Сохраняем конфигурацию
+    final configJson = const JsonEncoder.withIndent('  ').convert(finalConfig);
+    await configFile.writeAsString(configJson);
+    
+    _log('Config file created: ${configFile.path} (${configJson.length} bytes)');
     
     return configFile;
   }
