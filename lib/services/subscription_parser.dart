@@ -40,6 +40,9 @@ class SubscriptionParser {
       } else if (trimmed.startsWith('ss://')) {
         final config = parseShadowsocksUrl(trimmed);
         if (config != null) configs.add(config);
+      } else if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) {
+        final config = parseHysteria2Url(trimmed);
+        if (config != null) configs.add(config);
       }
     }
     
@@ -57,6 +60,20 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
+        'log': {'loglevel': 'info'},
+        'inbounds': [
+          {
+            'port': 10808,
+            'protocol': 'socks',
+            'settings': {'auth': 'noauth', 'udp': true},
+            'tag': 'socks-in'
+          },
+          {
+            'port': 10809,
+            'protocol': 'http',
+            'tag': 'http-in'
+          }
+        ],
         'outbounds': [
           {
             'protocol': 'vless',
@@ -83,9 +100,28 @@ class SubscriptionParser {
                   'serverName': params['sni'] ?? address,
                   'allowInsecure': params['allowInsecure'] == '1',
                 }
-            }
+            },
+            'tag': 'proxy'
+          },
+          {
+            'protocol': 'freedom',
+            'tag': 'direct'
+          },
+          {
+            'protocol': 'blackhole',
+            'tag': 'block'
           }
-        ]
+        ],
+        'routing': {
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': [
+            {
+              'type': 'field',
+              'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            }
+          ]
+        }
       };
       
       return VpnConfig(
@@ -107,6 +143,20 @@ class SubscriptionParser {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
       
       final config = {
+        'log': {'loglevel': 'info'},
+        'inbounds': [
+          {
+            'port': 10808,
+            'protocol': 'socks',
+            'settings': {'auth': 'noauth', 'udp': true},
+            'tag': 'socks-in'
+          },
+          {
+            'port': 10809,
+            'protocol': 'http',
+            'tag': 'http-in'
+          }
+        ],
         'outbounds': [
           {
             'protocol': 'vmess',
@@ -128,9 +178,28 @@ class SubscriptionParser {
             'streamSettings': {
               'network': json['net'] ?? 'tcp',
               'security': json['tls'] ?? 'none',
-            }
+            },
+            'tag': 'proxy'
+          },
+          {
+            'protocol': 'freedom',
+            'tag': 'direct'
+          },
+          {
+            'protocol': 'blackhole',
+            'tag': 'block'
           }
-        ]
+        ],
+        'routing': {
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': [
+            {
+              'type': 'field',
+              'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            }
+          ]
+        }
       };
       
       return VpnConfig(
@@ -156,6 +225,20 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
+        'log': {'loglevel': 'info'},
+        'inbounds': [
+          {
+            'port': 10808,
+            'protocol': 'socks',
+            'settings': {'auth': 'noauth', 'udp': true},
+            'tag': 'socks-in'
+          },
+          {
+            'port': 10809,
+            'protocol': 'http',
+            'tag': 'http-in'
+          }
+        ],
         'outbounds': [
           {
             'protocol': 'trojan',
@@ -174,9 +257,28 @@ class SubscriptionParser {
               'tlsSettings': {
                 'serverName': params['sni'] ?? address,
               }
-            }
+            },
+            'tag': 'proxy'
+          },
+          {
+            'protocol': 'freedom',
+            'tag': 'direct'
+          },
+          {
+            'protocol': 'blackhole',
+            'tag': 'block'
           }
-        ]
+        ],
+        'routing': {
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': [
+            {
+              'type': 'field',
+              'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            }
+          ]
+        }
       };
       
       return VpnConfig(
@@ -204,6 +306,20 @@ class SubscriptionParser {
       final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
       
       final config = {
+        'log': {'loglevel': 'info'},
+        'inbounds': [
+          {
+            'port': 10808,
+            'protocol': 'socks',
+            'settings': {'auth': 'noauth', 'udp': true},
+            'tag': 'socks-in'
+          },
+          {
+            'port': 10809,
+            'protocol': 'http',
+            'tag': 'http-in'
+          }
+        ],
         'outbounds': [
           {
             'protocol': 'shadowsocks',
@@ -216,9 +332,28 @@ class SubscriptionParser {
                   'password': password,
                 }
               ]
-            }
+            },
+            'tag': 'proxy'
+          },
+          {
+            'protocol': 'freedom',
+            'tag': 'direct'
+          },
+          {
+            'protocol': 'blackhole',
+            'tag': 'block'
           }
-        ]
+        ],
+        'routing': {
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': [
+            {
+              'type': 'field',
+              'ip': ['geoip:private'],
+              'outboundTag': 'direct'
+            }
+          ]
+        }
       };
       
       return VpnConfig(
@@ -229,6 +364,48 @@ class SubscriptionParser {
       );
     } catch (e) {
       print('Error parsing shadowsocks URL: $e');
+      return null;
+    }
+  }
+
+  VpnConfig? parseHysteria2Url(String url) {
+    try {
+      // hysteria2://password@address:port?sni=example.com#name
+      final uri = Uri.parse(url);
+      final password = uri.userInfo;
+      final address = uri.host;
+      final port = uri.port;
+      final params = uri.queryParameters;
+      
+      final name = Uri.decodeComponent(uri.fragment.isNotEmpty ? uri.fragment : '$address:$port');
+      
+      final config = {
+        'server': '$address:$port',
+        'auth': password,
+        'tls': {
+          'sni': params['sni'] ?? address,
+          'insecure': params['insecure'] == '1',
+        },
+        'bandwidth': {
+          'up': params['up'] ?? '100 mbps',
+          'down': params['down'] ?? '100 mbps',
+        },
+        'socks5': {
+          'listen': '127.0.0.1:10808'
+        },
+        'http': {
+          'listen': '127.0.0.1:10809'
+        }
+      };
+      
+      return VpnConfig(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        coreType: CoreType.hysteria2,
+        config: config,
+      );
+    } catch (e) {
+      print('Error parsing hysteria2 URL: $e');
       return null;
     }
   }
