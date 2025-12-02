@@ -611,13 +611,13 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
                                 color: Colors.green.withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
-                                  Icon(Icons.circle, size: 8, color: Colors.white),
-                                  SizedBox(width: 4),
+                                  const Icon(Icons.circle, size: 8, color: Colors.white),
+                                  const SizedBox(width: 4),
                                   Text(
                                     AppLocalizations.of(context)!.active,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.white,
                                     ),
