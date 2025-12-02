@@ -89,7 +89,7 @@ class _NeoTunAppState extends State<NeoTunApp> {
       title: 'NeoTUN',
       themeMode: _themeMode,
       locale: _locale,
-      localizationsDelegates: const [
+      localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
