@@ -187,7 +187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
             title: Text(AppLocalizations.of(context)!.about),
-            subtitle: Text('${AppLocalizations.of(context)!.appName} v$_appVersion${_appVersion.contains('beta') ? ' (Beta)' : ''}\nCross-platform VPN client\nSupports ${AppLocalizations.of(context)!.xray}, ${AppLocalizations.of(context)!.singbox}, ${AppLocalizations.of(context)!.hysteria2}'),
+            subtitle: Text('${AppLocalizations.of(context)!.appName} v$_appVersion${_appVersion.contains('beta') ? ' (Beta)' : ''}\nCross-platform VPN client\nPowered by ${AppLocalizations.of(context)!.xray}'),
             trailing: const Icon(Icons.info),
           ),
         ),

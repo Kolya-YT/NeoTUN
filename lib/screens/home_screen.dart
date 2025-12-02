@@ -280,21 +280,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         // 1. Проверяем, это JSON конфигурация
         final jsonData = json.decode(text);
         if (jsonData is Map) {
-          // Определяем тип ядра по структуре
-          CoreType coreType = CoreType.xray;
-          if (jsonData.containsKey('inbounds') && jsonData.containsKey('outbounds')) {
-            if (jsonData['outbounds'] is List && 
-                (jsonData['outbounds'] as List).any((o) => o['type'] != null)) {
-              coreType = CoreType.singbox;
-            }
-          } else if (jsonData.containsKey('server') && jsonData.containsKey('auth')) {
-            coreType = CoreType.hysteria2;
-          }
-
+          // Все конфигурации теперь только Xray
           final config = VpnConfig(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             name: 'Imported ${DateTime.now().toString().substring(0, 19)}',
-            coreType: coreType,
+            coreType: CoreType.xray,
             config: jsonData as Map<String, dynamic>,
           );
           importedConfigs.add(config);
@@ -968,14 +958,7 @@ class _ConfigListTabState extends State<ConfigListTab> with AutomaticKeepAliveCl
   }
 
   IconData _getCoreIcon(CoreType coreType) {
-    switch (coreType) {
-      case CoreType.xray:
-        return Icons.flash_on;
-      case CoreType.singbox:
-        return Icons.inbox;
-      case CoreType.hysteria2:
-        return Icons.speed;
-    }
+    return Icons.flash_on; // Xray icon
   }
 
   Future<void> _startConfig(VpnConfig config) async {

@@ -158,23 +158,16 @@ class _CoresScreenState extends State<CoresScreen> {
   }
 
   IconData _getCoreIcon(CoreType coreType) {
-    switch (coreType) {
-      case CoreType.xray:
-        return Icons.flight;
-      case CoreType.singbox:
-        return Icons.inbox;
-      case CoreType.hysteria2:
-        return Icons.speed;
-    }
+    return Icons.flight; // Xray icon
   }
 
   Future<void> _checkForUpdates() async {
     setState(() => _loading = true);
     try {
-      await CoreManager.instance.fetchManifest();
+      // Manifest checking removed - only Xray now
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Manifest updated')),
+          const SnackBar(content: Text('Xray is the only core')),
         );
       }
     } catch (e) {
@@ -287,6 +280,15 @@ class _CoresScreenState extends State<CoresScreen> {
   }
 
   Future<void> _rollbackCore(CoreType core) async {
+    // Rollback functionality removed - simplified core management
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rollback not available in simplified version')),
+      );
+    }
+  }
+
+  Future<void> _rollbackCoreOld(CoreType core) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -310,7 +312,7 @@ class _CoresScreenState extends State<CoresScreen> {
     setState(() => _loading = true);
     
     try {
-      await CoreManager.instance.rollbackCore(core);
+      // Rollback removed
       await _checkCores();
       
       if (mounted) {
