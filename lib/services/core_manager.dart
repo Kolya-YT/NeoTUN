@@ -13,6 +13,8 @@ import 'xray_windows_service.dart';
 import 'windows_proxy.dart';
 import 'traffic_stats.dart';
 import 'tun_manager.dart';
+import 'xray_downloader.dart';
+import 'libxray_downloader.dart';
 
 class CoreManager {
   static final CoreManager instance = CoreManager._();
@@ -49,6 +51,10 @@ class CoreManager {
       }
       
       _log('✓ CoreManager initialized: ${_coreDir.path}');
+      
+      // Автоматическая проверка и загрузка xray-core
+      await _ensureXrayInstalled();
+      
     } catch (e, stack) {
       print('[CoreManager] ERROR: $e');
       print('[CoreManager] Stack: $stack');
@@ -67,6 +73,96 @@ class CoreManager {
         rethrow;
       }
     }
+  }
+
+  /// Убедиться что xray-core установлен
+  Future<void> _ensureXrayInstalled() async {
+    try {
+      final isInstalled = await XrayDownloader.instance.isInstalled();
+      
+      if (!isInstalled) {
+        _log('Xray-core not found, downloading...');
+        print('[CoreManager] Xray-core not installed, starting download...');
+        
+        final success = await XrayDownloader.instance.download(
+          onProgress: (received, total) {
+            final percent = (received / total * 100).toStringAsFixed(1);
+            _log('Downloading Xray-core: $percent%');
+          },
+        );
+        
+        if (success) {
+          _log('✓ Xray-core downloaded successfully');
+          print('[CoreManager] ✓ Xray-core installed');
+        } else {
+          _log('⚠ Failed to download Xray-core');
+          print('[CoreManager] ⚠ Failed to download Xray-core');
+        }
+      } else {
+        final version = await XrayDownloader.instance.getInstalledVersion();
+        _log('✓ Xray-core installed: ${version ?? "unknown version"}');
+        print('[CoreManager] ✓ Xray-core already installed: $version');
+        
+        // Проверяем обновления в фоне
+        _checkForXrayUpdate();
+      }
+      
+      // Для Android также проверяем libxray
+      if (Platform.isAndroid) {
+        await _ensureLibxrayInstalled();
+      }
+      
+    } catch (e) {
+      print('[CoreManager] Error ensuring Xray installation: $e');
+      _log('Error checking Xray installation: $e');
+    }
+  }
+
+  /// Убедиться что libxray установлен (Android)
+  Future<void> _ensureLibxrayInstalled() async {
+    try {
+      final isInstalled = await LibxrayDownloader.instance.isInstalled();
+      
+      if (!isInstalled) {
+        _log('[Android] libxray not found, downloading...');
+        print('[CoreManager] libxray not installed, starting download...');
+        
+        final success = await LibxrayDownloader.instance.download(
+          onProgress: (received, total) {
+            final percent = (received / total * 100).toStringAsFixed(1);
+            _log('[Android] Downloading libxray: $percent%');
+          },
+        );
+        
+        if (success) {
+          _log('[Android] ✓ libxray downloaded successfully');
+          print('[CoreManager] ✓ libxray installed');
+        } else {
+          _log('[Android] ⚠ Failed to download libxray');
+          print('[CoreManager] ⚠ Failed to download libxray');
+        }
+      } else {
+        final version = await LibxrayDownloader.instance.getInstalledVersion();
+        _log('[Android] ✓ libxray installed: ${version ?? "unknown version"}');
+        print('[CoreManager] ✓ libxray already installed: $version');
+      }
+      
+    } catch (e) {
+      print('[CoreManager] Error ensuring libxray installation: $e');
+      _log('[Android] Error checking libxray installation: $e');
+    }
+  }
+
+  /// Проверить обновления Xray в фоне
+  void _checkForXrayUpdate() {
+    XrayDownloader.instance.checkForUpdate().then((newVersion) {
+      if (newVersion != null) {
+        _log('Xray-core update available: $newVersion');
+        print('[CoreManager] Xray-core update available: $newVersion');
+      }
+    }).catchError((e) {
+      print('[CoreManager] Error checking for Xray update: $e');
+    });
   }
 
   String getCorePath(CoreType coreType) {

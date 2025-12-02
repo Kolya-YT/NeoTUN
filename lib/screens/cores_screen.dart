@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../models/core_type.dart';
 import '../services/core_manager.dart';
+import '../services/xray_downloader.dart';
+import '../services/libxray_downloader.dart';
 
 class CoresScreen extends StatefulWidget {
   const CoresScreen({super.key});
@@ -23,14 +26,25 @@ class _CoresScreenState extends State<CoresScreen> {
 
   Future<void> _checkCores() async {
     setState(() => _loading = true);
-    for (final core in CoreType.values) {
-      _installed[core] = await CoreManager.instance.isCoreInstalled(core);
-      if (_installed[core] == true) {
-        _versions[core] = await CoreManager.instance.getCoreVersion(core);
-      }
+    
+    // Проверяем Xray-core
+    final xrayInstalled = await XrayDownloader.instance.isInstalled();
+    _installed[CoreType.xray] = xrayInstalled;
+    
+    if (xrayInstalled) {
+      _versions[CoreType.xray] = await XrayDownloader.instance.getInstalledVersion();
     }
+    
+    // Для Android также проверяем libxray
+    if (Platform.isAndroid) {
+      final libxrayInstalled = await LibxrayDownloader.instance.isInstalled();
+      // libxray проверка убрана - устанавливается автоматически через AAR
+    }
+    
     setState(() => _loading = false);
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +65,7 @@ class _CoresScreenState extends State<CoresScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Manage proxy cores: Xray, sing-box, and Hysteria2',
+                    'Manage Xray-core - automatic download and updates',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 16),
@@ -129,15 +143,15 @@ class _CoresScreenState extends State<CoresScreen> {
                       children: [
                         if (installed) ...[
                           TextButton.icon(
-                            onPressed: _loading ? null : () => _rollbackCore(core),
-                            icon: const Icon(Icons.undo),
-                            label: const Text('Rollback'),
+                            onPressed: _loading ? null : () => _checkCoreUpdate(core),
+                            icon: const Icon(Icons.update),
+                            label: const Text('Check Update'),
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
-                            onPressed: _loading ? null : () => _updateCore(core),
-                            icon: const Icon(Icons.update),
-                            label: const Text('Update'),
+                            onPressed: _loading ? null : () => _reinstallCore(core),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reinstall'),
                           ),
                         ] else
                           ElevatedButton.icon(
@@ -164,10 +178,35 @@ class _CoresScreenState extends State<CoresScreen> {
   Future<void> _checkForUpdates() async {
     setState(() => _loading = true);
     try {
-      // Manifest checking removed - only Xray now
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Xray is the only core')),
+      final releaseInfo = await XrayDownloader.instance.getLatestReleaseInfo();
+      
+      if (releaseInfo != null && mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Latest Xray-core Release'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Version: ${releaseInfo['version']}'),
+                  const SizedBox(height: 8),
+                  Text('Published: ${releaseInfo['published_at']}'),
+                  const SizedBox(height: 16),
+                  const Text('Release Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(releaseInfo['body'] ?? 'No release notes available'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
@@ -188,8 +227,8 @@ class _CoresScreenState extends State<CoresScreen> {
     });
     
     try {
-      await CoreManager.instance.downloadCore(
-        core,
+      // Используем новый XrayDownloader
+      final success = await XrayDownloader.instance.download(
         onProgress: (received, total) {
           if (total > 0) {
             setState(() {
@@ -199,12 +238,16 @@ class _CoresScreenState extends State<CoresScreen> {
         },
       );
       
-      await _checkCores();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${core.displayName} installed successfully')),
-        );
+      if (success) {
+        await _checkCores();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${core.displayName} installed successfully')),
+          );
+        }
+      } else {
+        throw Exception('Download failed');
       }
     } catch (e) {
       if (mounted) {
@@ -220,71 +263,55 @@ class _CoresScreenState extends State<CoresScreen> {
     }
   }
 
-  Future<void> _updateCore(CoreType core) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Core'),
-        content: Text('Update ${core.displayName} to the latest version?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    setState(() {
-      _loading = true;
-      _downloadProgress[core] = 0.0;
-    });
+  Future<void> _checkCoreUpdate(CoreType core) async {
+    setState(() => _loading = true);
     
     try {
-      await CoreManager.instance.downloadCore(
-        core,
-        onProgress: (received, total) {
-          if (total > 0) {
-            setState(() {
-              _downloadProgress[core] = received / total;
-            });
+      final newVersion = await XrayDownloader.instance.checkForUpdate();
+      
+      if (newVersion != null) {
+        if (mounted) {
+          final result = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Update Available'),
+              content: Text('New version available: $newVersion\n\nDo you want to update?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Update'),
+                ),
+              ],
+            ),
+          );
+          
+          if (result == true) {
+            await _reinstallCore(core);
           }
-        },
-      );
-      
-      await _checkCores();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${core.displayName} updated successfully')),
-        );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You have the latest version')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Update failed: $e')),
+          SnackBar(content: Text('Error checking update: $e')),
         );
       }
     } finally {
-      setState(() {
-        _loading = false;
-        _downloadProgress.remove(core);
-      });
+      setState(() => _loading = false);
     }
   }
 
-  Future<void> _rollbackCore(CoreType core) async {
-    // Rollback functionality removed - simplified core management
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rollback not available in simplified version')),
-      );
-    }
+  Future<void> _reinstallCore(CoreType core) async {
+    await _installCore(core);
   }
 }
