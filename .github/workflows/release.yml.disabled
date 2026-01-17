@@ -1,11 +1,13 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-  # Temporarily disabled - only run on tags
-  workflow_dispatch: # Manual trigger only
+  # Completely disabled - only manual trigger
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        default: 'v1.0.0'
 
 jobs:
   build-android:
