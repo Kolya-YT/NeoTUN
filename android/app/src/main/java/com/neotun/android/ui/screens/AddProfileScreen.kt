@@ -84,6 +84,11 @@ fun AddProfileScreen(
                             Button(
                                 onClick = {
                                     try {
+                                        if (uriText.isBlank()) {
+                                            importStatus = "Error: Please enter a URI"
+                                            return@Button
+                                        }
+                                        
                                         val profile = uriParser.parseUri(uriText.trim())
                                         if (profile != null) {
                                             name = profile.name
@@ -91,10 +96,11 @@ fun AddProfileScreen(
                                             port = profile.port.toString()
                                             importStatus = "Successfully imported profile"
                                         } else {
-                                            importStatus = "Error: Invalid URI format"
+                                            importStatus = "Error: Invalid URI format or unsupported protocol"
                                         }
                                     } catch (e: Exception) {
-                                        importStatus = "Error: ${e.message}"
+                                        importStatus = "Error: ${e.message ?: "Unknown error occurred"}"
+                                        android.util.Log.e("AddProfileScreen", "Import error", e)
                                     }
                                 },
                                 enabled = uriText.isNotBlank(),
@@ -140,14 +146,22 @@ fun AddProfileScreen(
             
             Button(
                 onClick = {
-                    val profile = VpnProfile(
-                        name = name,
-                        protocol = VpnProtocol.VMESS,
-                        server = server,
-                        port = port.toIntOrNull() ?: 443,
-                        credentials = VpnCredentials.VMess(userId = "test-uuid")
-                    )
-                    onSaveProfile(profile)
+                    try {
+                        if (name.isBlank() || server.isBlank()) {
+                            return@Button
+                        }
+                        
+                        val profile = VpnProfile(
+                            name = name.trim(),
+                            protocol = VpnProtocol.VMESS,
+                            server = server.trim(),
+                            port = port.toIntOrNull() ?: 443,
+                            credentials = VpnCredentials.VMess(userId = "test-uuid")
+                        )
+                        onSaveProfile(profile)
+                    } catch (e: Exception) {
+                        android.util.Log.e("AddProfileScreen", "Failed to save profile", e)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = name.isNotBlank() && server.isNotBlank()
