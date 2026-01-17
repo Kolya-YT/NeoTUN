@@ -239,6 +239,7 @@ jobs:
         & $makeappx pack /d "msix-package" /p "NeoTUN.msix" /o
 
     - name: Sign MSIX package
+      if: secrets.WINDOWS_CERTIFICATE_BASE64 != ''
       run: |
         $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}")
         [System.IO.File]::WriteAllBytes("cert.pfx", $certBytes)
