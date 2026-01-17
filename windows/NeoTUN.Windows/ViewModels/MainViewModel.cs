@@ -7,6 +7,7 @@ using System.Windows.Input;
 using NeoTUN.Core.Models;
 using NeoTUN.Core.Config;
 using NeoTUN.Windows.Commands;
+using UriParser = NeoTUN.Core.Config.UriParser;
 
 namespace NeoTUN.Windows.ViewModels
 {
@@ -40,7 +41,7 @@ namespace NeoTUN.Windows.ViewModels
     {
         private readonly WindowsTunnelService _tunnelService;
         private ConnectionState _connectionState = ConnectionState.Disconnected;
-        private VpnProfile _selectedProfile;
+        private VpnProfile? _selectedProfile;
         private string _statusText = "Disconnected";
         
         public MainViewModel()
@@ -52,8 +53,8 @@ namespace NeoTUN.Windows.ViewModels
             Profiles = new ObservableCollection<VpnProfile>();
             Logs = new ObservableCollection<string>();
             
-            ConnectCommand = new AsyncRelayCommand(ConnectAsync, CanConnect);
-            DisconnectCommand = new AsyncRelayCommand(DisconnectAsync, CanDisconnect);
+            ConnectCommand = new AsyncRelayCommand(ConnectAsync, () => CanConnect);
+            DisconnectCommand = new AsyncRelayCommand(DisconnectAsync, () => CanDisconnect);
             AddProfileCommand = new RelayCommand(AddProfile);
             DeleteProfileCommand = new RelayCommand<VpnProfile>(DeleteProfile);
             ImportFromUriCommand = new RelayCommand<string>(ImportFromUri);
@@ -157,7 +158,7 @@ namespace NeoTUN.Windows.ViewModels
             }
         }
         
-        private void DeleteProfile(VpnProfile profile)
+        private void DeleteProfile(VpnProfile? profile)
         {
             if (profile != null)
             {
@@ -169,7 +170,7 @@ namespace NeoTUN.Windows.ViewModels
             }
         }
         
-        private void ImportFromUri(string uri)
+        private void ImportFromUri(string? uri)
         {
             if (string.IsNullOrEmpty(uri)) return;
             
@@ -187,7 +188,7 @@ namespace NeoTUN.Windows.ViewModels
             }
         }
         
-        private void OnConnectionStateChanged(object sender, ConnectionState state)
+        private void OnConnectionStateChanged(object? sender, ConnectionState state)
         {
             App.Current.Dispatcher.Invoke(() =>
             {
@@ -195,7 +196,7 @@ namespace NeoTUN.Windows.ViewModels
             });
         }
         
-        private void OnLogReceived(object sender, string log)
+        private void OnLogReceived(object? sender, string log)
         {
             App.Current.Dispatcher.Invoke(() =>
             {
