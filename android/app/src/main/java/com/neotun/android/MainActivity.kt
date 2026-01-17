@@ -15,7 +15,10 @@ import androidx.navigation.compose.rememberNavController
 import com.neotun.android.database.AppDatabase
 import com.neotun.android.models.VpnProfile
 import com.neotun.android.repository.ProfileRepository
-import com.neotun.android.ui.screens.*
+import com.neotun.android.ui.screens.AddProfileScreen
+import com.neotun.android.ui.screens.LogsScreen
+import com.neotun.android.ui.screens.MainScreen
+import com.neotun.android.ui.screens.ProfilesScreen
 import com.neotun.android.ui.theme.NeoTUNTheme
 import com.neotun.android.viewmodels.MainViewModel
 
