@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>Assets\neotun.ico</ApplicationIcon>
+    <!-- <ApplicationIcon>Assets\neotun.ico</ApplicationIcon> -->
     <AssemblyTitle>NeoTUN</AssemblyTitle>
     <AssemblyDescription>Modern VPN/Proxy Client</AssemblyDescription>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
