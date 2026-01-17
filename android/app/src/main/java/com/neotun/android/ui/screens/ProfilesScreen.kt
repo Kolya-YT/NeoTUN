@@ -3,6 +3,7 @@ package com.neotun.android.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.neotun.android.models.VpnProfile
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilesScreen(
     profiles: List<VpnProfile>,
@@ -113,15 +113,16 @@ private fun ProfileCard(
     var showMenu by remember { mutableStateOf(false) }
     
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surface
             }
-        ),
-        onClick = onSelect
+        )
     ) {
         Row(
             modifier = Modifier

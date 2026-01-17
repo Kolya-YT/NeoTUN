@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                         
                         composable("add_profile") {
                             AddProfileScreen(
-                                onSaveProfile = { profile ->
+                                onSaveProfile = { profile: VpnProfile ->
                                     viewModel.addProfile(profile)
                                     navController.popBackStack()
                                 },
