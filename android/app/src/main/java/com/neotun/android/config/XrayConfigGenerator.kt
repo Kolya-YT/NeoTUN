@@ -57,7 +57,7 @@ class XrayConfigGenerator {
             })
         }
         
-        return Json { prettyPrint = true }.encodeToString(config)
+        return Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), config)
     }
     
     private fun generateOutbound(profile: VpnProfile): JsonObject {
