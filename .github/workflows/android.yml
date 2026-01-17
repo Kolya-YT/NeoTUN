@@ -130,13 +130,6 @@ jobs:
         # Make binaries executable
         chmod +x android/app/src/main/jniLibs/*/libxray.so
 
-    - name: Create keystore for signing
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
-      env:
-        ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-
     - name: Setup Gradle Wrapper
       working-directory: android
       run: |
@@ -173,16 +166,7 @@ jobs:
     - name: Build Release APK
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       working-directory: android
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      run: |
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=app/keystore.jks \
-          -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-          -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-          -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+      run: ./gradlew assembleRelease
 
     - name: Upload Debug APK
       if: github.event_name == 'pull_request'
@@ -198,6 +182,3 @@ jobs:
         name: neotun-release.apk
         path: android/app/build/outputs/apk/release/app-release.apk
 
-    - name: Clean up keystore
-      if: always()
-      run: rm -f android/app/keystore.jks
