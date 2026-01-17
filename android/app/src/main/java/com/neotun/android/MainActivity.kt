@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.neotun.android.ui.screens.MainScreen
 import com.neotun.android.ui.theme.NeoTUNTheme
-import com.neotun.core.models.ConnectionState
+import com.neotun.android.models.ConnectionState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

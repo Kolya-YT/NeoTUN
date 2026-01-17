@@ -12,8 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neotun.core.models.ConnectionState
-import com.neotun.core.models.VpnProfile
+import com.neotun.android.models.ConnectionState
+import com.neotun.android.models.VpnProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

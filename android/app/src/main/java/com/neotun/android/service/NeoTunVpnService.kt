@@ -11,9 +11,9 @@ import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import com.neotun.android.MainActivity
 import com.neotun.android.R
-import com.neotun.core.config.XrayConfigGenerator
-import com.neotun.core.models.ConnectionState
-import com.neotun.core.models.VpnProfile
+import com.neotun.android.config.XrayConfigGenerator
+import com.neotun.android.models.ConnectionState
+import com.neotun.android.models.VpnProfile
 import kotlinx.coroutines.*
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -227,7 +227,7 @@ class NeoTunVpnService : VpnService() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("NeoTUN Connected")
             .setContentText("Connected to ${profile.name}")
-            .setSmallIcon(R.drawable.ic_vpn)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
