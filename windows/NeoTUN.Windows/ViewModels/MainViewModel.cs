@@ -7,6 +7,7 @@ using System.Windows.Input;
 using NeoTUN.Core.Models;
 using NeoTUN.Windows.Services;
 using NeoTUN.Core.Config;
+using NeoTUN.Windows.Commands;
 
 namespace NeoTUN.Windows.ViewModels
 {
@@ -121,14 +122,16 @@ namespace NeoTUN.Windows.ViewModels
         private void AddProfile()
         {
             // Open add profile dialog
-            var profile = new VpnProfile
-            {
-                Name = "New Profile",
-                Protocol = VpnProtocol.VMess,
-                Server = "example.com",
-                Port = 443,
-                Credentials = new VpnCredentials.VMess("user-id", 0, "auto")
-            };
+            var profile = new VpnProfile(
+                Guid.NewGuid().ToString(),
+                "New Profile",
+                VpnProtocol.VMess,
+                "example.com",
+                443,
+                new VpnCredentials.VMess("user-id", 0, "auto"),
+                new VpnSettings(),
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            );
             
             Profiles.Add(profile);
         }
@@ -199,4 +202,3 @@ namespace NeoTUN.Windows.ViewModels
         }
     }
 }
-using NeoTUN.Windows.Commands;
