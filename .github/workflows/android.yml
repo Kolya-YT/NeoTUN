@@ -140,16 +140,30 @@ jobs:
     - name: Setup Gradle Wrapper
       working-directory: android
       run: |
-        # Download gradle wrapper jar if missing
+        # Ensure gradle wrapper jar exists
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "Downloading Gradle Wrapper JAR..."
           mkdir -p gradle/wrapper
           curl -L -o gradle/wrapper/gradle-wrapper.jar \
             "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
         fi
+        
+        # Ensure gradlew scripts exist and are correct
+        if [ ! -f "gradlew" ] || [ ! -s "gradlew" ]; then
+          echo "Downloading gradlew script..."
+          curl -L -o gradlew "https://github.com/gradle/gradle/raw/v8.4.0/gradlew"
+        fi
+        
+        if [ ! -f "gradlew.bat" ] || [ ! -s "gradlew.bat" ]; then
+          echo "Downloading gradlew.bat script..."
+          curl -L -o gradlew.bat "https://github.com/gradle/gradle/raw/v8.4.0/gradlew.bat"
+        fi
+        
+        # Make gradlew executable
         chmod +x gradlew
-
-    - name: Make gradlew executable
-      run: chmod +x android/gradlew
+        
+        # Test wrapper
+        ./gradlew --version
 
     - name: Build Debug APK
       if: github.event_name == 'pull_request'
