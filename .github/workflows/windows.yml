@@ -1,0 +1,192 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-xray-windows:
+    name: Build Xray for Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache-dependency-path: xray-core/go.sum
+
+    - name: Build Xray for Windows
+      working-directory: xray-core
+      env:
+        GOOS: windows
+        GOARCH: amd64
+        CGO_ENABLED: 0
+      run: |
+        go build -v -o xray.exe -trimpath -ldflags "-s -w -buildid=" ./main
+
+    - name: Upload Xray binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: xray-windows
+        path: xray-core/xray.exe
+        retention-days: 1
+
+  build-windows-app:
+    name: Build Windows Application
+    runs-on: windows-latest
+    needs: build-xray-windows
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download Xray binary
+      uses: actions/download-artifact@v4
+      with:
+        name: xray-windows
+        path: xray-binary
+
+    - name: Copy Xray to Windows project
+      run: |
+        Copy-Item "xray-binary/xray.exe" "windows/NeoTUN.Windows/xray.exe"
+
+    - name: Download Wintun
+      run: |
+        $wintunUrl = "https://www.wintun.net/builds/wintun-0.14.1.zip"
+        Invoke-WebRequest -Uri $wintunUrl -OutFile "wintun.zip"
+        Expand-Archive -Path "wintun.zip" -DestinationPath "wintun"
+        Copy-Item "wintun/wintun/bin/amd64/wintun.dll" "windows/NeoTUN.Windows/wintun.dll"
+
+    - name: Restore dependencies
+      working-directory: windows
+      run: dotnet restore
+
+    - name: Build application
+      working-directory: windows
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish self-contained executable
+      working-directory: windows
+      run: |
+        dotnet publish NeoTUN.Windows/NeoTUN.Windows.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output ../publish `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:PublishTrimmed=false
+
+    - name: Upload Windows executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: neotun-windows.exe
+        path: publish/NeoTUN.Windows.exe
+
+  build-msix-package:
+    name: Build MSIX Package
+    runs-on: windows-latest
+    needs: build-windows-app
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download Windows executable
+      uses: actions/download-artifact@v4
+      with:
+        name: neotun-windows.exe
+        path: windows-exe
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.3
+
+    - name: Create MSIX package structure
+      run: |
+        New-Item -ItemType Directory -Force -Path "msix-package"
+        Copy-Item "windows-exe/NeoTUN.Windows.exe" "msix-package/"
+        
+        # Create basic manifest
+        $manifest = @'
+        <?xml version="1.0" encoding="utf-8"?>
+        <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+                 xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+                 xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
+          <Identity Name="NeoTUN" Publisher="CN=NeoTUN" Version="1.0.0.0" />
+          <Properties>
+            <DisplayName>NeoTUN</DisplayName>
+            <PublisherDisplayName>NeoTUN Team</PublisherDisplayName>
+            <Description>Modern VPN/Proxy Client</Description>
+          </Properties>
+          <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+          </Dependencies>
+          <Capabilities>
+            <rescap:Capability Name="runFullTrust" />
+          </Capabilities>
+          <Applications>
+            <Application Id="NeoTUN" Executable="NeoTUN.Windows.exe" EntryPoint="Windows.FullTrustApplication">
+              <uap:VisualElements DisplayName="NeoTUN" Description="Modern VPN/Proxy Client" BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
+                <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+              </uap:VisualElements>
+            </Application>
+          </Applications>
+        </Package>
+        '@
+        $manifest | Out-File -FilePath "msix-package/Package.appxmanifest" -Encoding UTF8
+
+    - name: Create placeholder assets
+      run: |
+        New-Item -ItemType Directory -Force -Path "msix-package/Assets"
+        # Create minimal PNG files (1x1 transparent pixels)
+        $pngBytes = [System.Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+        [System.IO.File]::WriteAllBytes("msix-package/Assets/Square44x44Logo.png", $pngBytes)
+        [System.IO.File]::WriteAllBytes("msix-package/Assets/Square150x150Logo.png", $pngBytes)
+        [System.IO.File]::WriteAllBytes("msix-package/Assets/Wide310x150Logo.png", $pngBytes)
+
+    - name: Create MSIX package
+      run: |
+        # Use makeappx.exe from Windows SDK
+        $makeappx = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.22621.0\x64\makeappx.exe"
+        if (-not (Test-Path $makeappx)) {
+          $makeappx = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe"
+        }
+        
+        & $makeappx pack /d "msix-package" /p "NeoTUN.msix" /o
+
+    - name: Sign MSIX package
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WINDOWS_CERTIFICATE_BASE64 != ''
+      run: |
+        # Create certificate from base64 secret
+        $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}")
+        [System.IO.File]::WriteAllBytes("cert.pfx", $certBytes)
+        
+        # Sign the package
+        $signtool = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+        if (-not (Test-Path $signtool)) {
+          $signtool = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
+        }
+        
+        & $signtool sign /fd SHA256 /f "cert.pfx" /p "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" "NeoTUN.msix"
+        
+        Remove-Item "cert.pfx"
+
+    - name: Upload MSIX package
+      uses: actions/upload-artifact@v4
+      with:
+        name: neotun-windows.msix
+        path: NeoTUN.msix
