@@ -53,14 +53,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Services\WindowsTunnelService.cs" />
-    <Compile Include="ViewModels\MainViewModel.cs" />
-    <Compile Include="Commands\RelayCommand.cs" />
-    <Compile Include="Dialogs\ImportProfileDialog.xaml.cs" />
-    <Compile Include="Views\MainWindow.xaml.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Assets\" />
     <Folder Include="Converters\" />
   </ItemGroup>
