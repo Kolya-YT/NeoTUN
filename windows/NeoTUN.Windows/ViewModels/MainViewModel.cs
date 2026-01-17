@@ -1,0 +1,202 @@
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using NeoTUN.Core.Models;
+using NeoTUN.Windows.Services;
+using NeoTUN.Core.Config;
+
+namespace NeoTUN.Windows.ViewModels
+{
+    public class MainViewModel : INotifyPropertyChanged
+    {
+        private readonly WindowsTunnelService _tunnelService;
+        private ConnectionState _connectionState = ConnectionState.Disconnected;
+        private VpnProfile _selectedProfile;
+        private string _statusText = "Disconnected";
+        
+        public MainViewModel()
+        {
+            _tunnelService = new WindowsTunnelService();
+            _tunnelService.ConnectionStateChanged += OnConnectionStateChanged;
+            _tunnelService.LogReceived += OnLogReceived;
+            
+            Profiles = new ObservableCollection<VpnProfile>();
+            Logs = new ObservableCollection<string>();
+            
+            ConnectCommand = new AsyncRelayCommand(ConnectAsync, CanConnect);
+            DisconnectCommand = new AsyncRelayCommand(DisconnectAsync, CanDisconnect);
+            AddProfileCommand = new RelayCommand(AddProfile);
+            DeleteProfileCommand = new RelayCommand<VpnProfile>(DeleteProfile);
+            ImportFromUriCommand = new RelayCommand<string>(ImportFromUri);
+        }
+        
+        public ObservableCollection<VpnProfile> Profiles { get; }
+        public ObservableCollection<string> Logs { get; }
+        
+        public ConnectionState ConnectionState
+        {
+            get => _connectionState;
+            private set
+            {
+                if (_connectionState != value)
+                {
+                    _connectionState = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsConnected));
+                    OnPropertyChanged(nameof(IsConnecting));
+                    OnPropertyChanged(nameof(CanConnect));
+                    OnPropertyChanged(nameof(CanDisconnect));
+                    
+                    StatusText = value switch
+                    {
+                        ConnectionState.Disconnected => "Disconnected",
+                        ConnectionState.Connecting => "Connecting...",
+                        ConnectionState.Connected => $"Connected to {SelectedProfile?.Name}",
+                        ConnectionState.Disconnecting => "Disconnecting...",
+                        ConnectionState.Error => "Connection Error",
+                        _ => "Unknown"
+                    };
+                }
+            }
+        }
+        
+        public VpnProfile SelectedProfile
+        {
+            get => _selectedProfile;
+            set
+            {
+                if (_selectedProfile != value)
+                {
+                    _selectedProfile = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CanConnect));
+                }
+            }
+        }
+        
+        public string StatusText
+        {
+            get => _statusText;
+            private set
+            {
+                if (_statusText != value)
+                {
+                    _statusText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        
+        public bool IsConnected => ConnectionState == ConnectionState.Connected;
+        public bool IsConnecting => ConnectionState == ConnectionState.Connecting || 
+                                   ConnectionState == ConnectionState.Disconnecting;
+        
+        public bool CanConnect => ConnectionState == ConnectionState.Disconnected && 
+                                 SelectedProfile != null;
+        
+        public bool CanDisconnect => ConnectionState == ConnectionState.Connected;
+        
+        public ICommand ConnectCommand { get; }
+        public ICommand DisconnectCommand { get; }
+        public ICommand AddProfileCommand { get; }
+        public ICommand DeleteProfileCommand { get; }
+        public ICommand ImportFromUriCommand { get; }
+        
+        private async Task ConnectAsync()
+        {
+            if (SelectedProfile != null)
+            {
+                await _tunnelService.ConnectAsync(SelectedProfile);
+            }
+        }
+        
+        private async Task DisconnectAsync()
+        {
+            await _tunnelService.DisconnectAsync();
+        }
+        
+        private void AddProfile()
+        {
+            // Open add profile dialog
+            var profile = new VpnProfile
+            {
+                Name = "New Profile",
+                Protocol = VpnProtocol.VMess,
+                Server = "example.com",
+                Port = 443,
+                Credentials = new VpnCredentials.VMess("user-id", 0, "auto")
+            };
+            
+            Profiles.Add(profile);
+        }
+        
+        private void DeleteProfile(VpnProfile profile)
+        {
+            if (profile != null)
+            {
+                Profiles.Remove(profile);
+                if (SelectedProfile == profile)
+                {
+                    SelectedProfile = null;
+                }
+            }
+        }
+        
+        private void ImportFromUri(string uri)
+        {
+            if (string.IsNullOrEmpty(uri)) return;
+            
+            var parser = new UriParser();
+            var profile = parser.ParseUri(uri);
+            
+            if (profile != null)
+            {
+                Profiles.Add(profile);
+                AddLog($"Imported profile: {profile.Name}");
+            }
+            else
+            {
+                AddLog($"Failed to parse URI: {uri}");
+            }
+        }
+        
+        private void OnConnectionStateChanged(object sender, ConnectionState state)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                ConnectionState = state;
+            });
+        }
+        
+        private void OnLogReceived(object sender, string log)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                AddLog(log);
+            });
+        }
+        
+        private void AddLog(string message)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss");
+            Logs.Insert(0, $"[{timestamp}] {message}");
+            
+            // Keep only last 1000 log entries
+            while (Logs.Count > 1000)
+            {
+                Logs.RemoveAt(Logs.Count - 1);
+            }
+        }
+        
+        public event PropertyChangedEventHandler PropertyChanged;
+        
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+}
+using NeoTUN.Windows.Commands;

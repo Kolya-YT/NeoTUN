@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NeoTUN</string>
+    <string name="vpn_service_description">NeoTUN VPN Service</string>
+    <string name="notification_channel_name">NeoTUN VPN</string>
+    <string name="notification_channel_description">NeoTUN VPN Service Notifications</string>
+    
+    <!-- Connection States -->
+    <string name="connection_disconnected">Disconnected</string>
+    <string name="connection_connecting">Connecting…</string>
+    <string name="connection_connected">Connected</string>
+    <string name="connection_disconnecting">Disconnecting…</string>
+    <string name="connection_error">Connection Error</string>
+    
+    <!-- UI Labels -->
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="profiles">Profiles</string>
+    <string name="add_profile">Add Profile</string>
+    <string name="settings">Settings</string>
+    <string name="logs">Logs</string>
+    <string name="import_uri">Import URI</string>
+    <string name="paste_uri_here">Paste URI here…</string>
+    
+    <!-- Profile Management -->
+    <string name="profile_name">Profile Name</string>
+    <string name="server_address">Server Address</string>
+    <string name="port">Port</string>
+    <string name="protocol">Protocol</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Error Messages -->
+    <string name="error_invalid_uri">Invalid URI format</string>
+    <string name="error_connection_failed">Connection failed</string>
+    <string name="error_vpn_permission_required">VPN permission required</string>
+    <string name="error_profile_not_selected">Please select a profile</string>
+</resources>
