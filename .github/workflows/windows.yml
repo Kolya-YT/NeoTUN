@@ -169,17 +169,11 @@ jobs:
         & $makeappx pack /d "msix-package" /p "NeoTUN.msix" /o
 
     - name: Sign MSIX package
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.WINDOWS_CERTIFICATE_BASE64 != ''
       env:
         WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
         WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
       run: |
-        # Only sign if certificate is available
-        if ([string]::IsNullOrEmpty($env:WINDOWS_CERTIFICATE_BASE64)) {
-          Write-Host "No certificate available, skipping signing"
-          exit 0
-        }
-        
         # Create certificate from base64 secret
         $certBytes = [System.Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64)
         [System.IO.File]::WriteAllBytes("cert.pfx", $certBytes)

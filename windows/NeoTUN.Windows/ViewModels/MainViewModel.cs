@@ -121,19 +121,15 @@ namespace NeoTUN.Windows.ViewModels
         
         private void AddProfile()
         {
-            // Open add profile dialog
-            var profile = new VpnProfile(
-                Guid.NewGuid().ToString(),
-                "New Profile",
-                VpnProtocol.VMess,
-                "example.com",
-                443,
-                new VpnCredentials.VMess("user-id", 0, "auto"),
-                new VpnSettings(),
-                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            );
+            // Open import profile dialog
+            var dialog = new NeoTUN.Windows.Dialogs.ImportProfileDialog();
+            dialog.Owner = App.Current.MainWindow;
             
-            Profiles.Add(profile);
+            if (dialog.ShowDialog() == true && dialog.ImportedProfile != null)
+            {
+                Profiles.Add(dialog.ImportedProfile);
+                AddLog($"Imported profile: {dialog.ImportedProfile.Name}");
+            }
         }
         
         private void DeleteProfile(VpnProfile profile)
@@ -194,9 +190,9 @@ namespace NeoTUN.Windows.ViewModels
             }
         }
         
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
