@@ -22,13 +22,15 @@ android {
         }
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Use default debug keystore
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
         }
     }
