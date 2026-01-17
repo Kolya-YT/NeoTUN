@@ -227,7 +227,7 @@ class NeoTunVpnService : VpnService() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("NeoTUN Connected")
             .setContentText("Connected to ${profile.name}")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setSmallIcon(R.drawable.ic_vpn)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
