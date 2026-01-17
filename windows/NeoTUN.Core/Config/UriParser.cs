@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Web;
 using NeoTUN.Core.Models;
 
 namespace NeoTUN.Core.Config;
@@ -67,7 +66,7 @@ public class UriParser
         var port = parsedUri.Port;
 
         var queryParams = ParseQueryParams(parsedUri.Query);
-        var fragment = HttpUtility.UrlDecode(parsedUri.Fragment?.TrimStart('#') ?? "VLess Server");
+        var fragment = Uri.UnescapeDataString(parsedUri.Fragment?.TrimStart('#') ?? "VLess Server");
 
         return new VpnProfile(
             Guid.NewGuid().ToString(),
@@ -104,7 +103,7 @@ public class UriParser
         var port = parsedUri.Port;
 
         var queryParams = ParseQueryParams(parsedUri.Query);
-        var fragment = HttpUtility.UrlDecode(parsedUri.Fragment?.TrimStart('#') ?? "Trojan Server");
+        var fragment = Uri.UnescapeDataString(parsedUri.Fragment?.TrimStart('#') ?? "Trojan Server");
 
         return new VpnProfile(
             Guid.NewGuid().ToString(),
@@ -138,7 +137,7 @@ public class UriParser
         var password = parts[1];
         var server = parsedUri.Host;
         var port = parsedUri.Port;
-        var fragment = HttpUtility.UrlDecode(parsedUri.Fragment?.TrimStart('#') ?? "Shadowsocks Server");
+        var fragment = Uri.UnescapeDataString(parsedUri.Fragment?.TrimStart('#') ?? "Shadowsocks Server");
 
         return new VpnProfile(
             Guid.NewGuid().ToString(),
@@ -165,8 +164,8 @@ public class UriParser
             var parts = param.Split('=', 2);
             if (parts.Length == 2)
             {
-                var key = HttpUtility.UrlDecode(parts[0]);
-                var value = HttpUtility.UrlDecode(parts[1]);
+                var key = Uri.UnescapeDataString(parts[0]);
+                var value = Uri.UnescapeDataString(parts[1]);
                 result[key] = value;
             }
         }
