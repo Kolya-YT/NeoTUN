@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.neotun.android.database.AppDatabase
+import com.neotun.android.models.VpnProfile
 import com.neotun.android.repository.ProfileRepository
 import com.neotun.android.ui.screens.*
 import com.neotun.android.ui.theme.NeoTUNTheme
