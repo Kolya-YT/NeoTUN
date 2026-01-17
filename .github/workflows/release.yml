@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  # Temporarily disabled - only run on tags
+  workflow_dispatch: # Manual trigger only
 
 jobs:
   build-android:
