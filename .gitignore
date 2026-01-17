@@ -39,6 +39,9 @@ android/app/debug/
 android/build/
 android/.gradle/
 
+# Gradle wrapper jar (downloaded in CI)
+gradle-wrapper.jar
+
 # Android keystore (ВАЖНО - не коммитить!)
 *.keystore
 *.jks

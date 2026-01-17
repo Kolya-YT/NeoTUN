@@ -95,6 +95,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
+    - name: Validate Gradle wrapper
+      uses: gradle/wrapper-validation-action@v2
+
     - name: Cache Gradle packages
       uses: actions/cache@v4
       with:
@@ -132,6 +135,20 @@ jobs:
         echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
       env:
         ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+    - name: Setup Gradle Wrapper
+      working-directory: android
+      run: |
+        # Download gradle wrapper jar if missing
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          mkdir -p gradle/wrapper
+          curl -L -o gradle/wrapper/gradle-wrapper.jar \
+            "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
+        fi
+        chmod +x gradlew
+
+    - name: Make gradlew executable
+      run: chmod +x android/gradlew
 
     - name: Build Debug APK
       if: github.event_name == 'pull_request'
