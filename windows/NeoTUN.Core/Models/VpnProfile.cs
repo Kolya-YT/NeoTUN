@@ -75,7 +75,7 @@ public record VpnSettings(
 public record TlsSettings(
     string? ServerName = null,
     bool AllowInsecure = false,
-    string[] Alpn = null
+    string[]? Alpn = null
 )
 {
     public TlsSettings() : this(null, false, Array.Empty<string>()) { }
