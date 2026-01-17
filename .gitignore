@@ -39,8 +39,8 @@ android/app/debug/
 android/build/
 android/.gradle/
 
-# Gradle wrapper jar (downloaded in CI)
-gradle-wrapper.jar
+# Gradle wrapper jar - KEEP THIS FILE for CI/CD
+# gradle-wrapper.jar
 
 # Android keystore (ВАЖНО - не коммитить!)
 *.keystore
