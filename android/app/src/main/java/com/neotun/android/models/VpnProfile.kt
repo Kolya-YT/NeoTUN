@@ -1,11 +1,10 @@
 package com.neotun.android.models
 
 import kotlinx.serialization.Serializable
-import java.util.UUID
 
 @Serializable
 data class VpnProfile(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = generateId(),
     val name: String,
     val protocol: VpnProtocol,
     val server: String,
@@ -15,6 +14,10 @@ data class VpnProfile(
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsed: Long? = null
 )
+
+private fun generateId(): String {
+    return "profile_${System.currentTimeMillis()}_${(1000..9999).random()}"
+}
 
 @Serializable
 enum class VpnProtocol {

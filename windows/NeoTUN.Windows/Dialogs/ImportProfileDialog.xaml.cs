@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 using NeoTUN.Core.Models;
-using NeoTUN.Core.Config;
+using UriParser = NeoTUN.Core.Config.UriParser;
 
 namespace NeoTUN.Windows.Dialogs
 {

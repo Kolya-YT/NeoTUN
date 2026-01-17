@@ -57,6 +57,9 @@
     <Folder Include="Commands\" />
     <Folder Include="Converters\" />
     <Folder Include="Dialogs\" />
+    <Folder Include="Services\" />
+    <Folder Include="ViewModels\" />
+    <Folder Include="Views\" />
   </ItemGroup>
 
 </Project>
