@@ -57,8 +57,4 @@
     <Folder Include="Converters\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="Services\**\*.cs" />
-  </ItemGroup>
-
 </Project>
