@@ -90,7 +90,7 @@ namespace NeoTUN.Windows.ViewModels
             }
         }
         
-        public VpnProfile SelectedProfile
+        public VpnProfile? SelectedProfile
         {
             get => _selectedProfile;
             set
