@@ -31,7 +31,9 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val viewModel: MainViewModel = viewModel()
+                    val viewModel: MainViewModel = viewModel {
+                        MainViewModel(application)
+                    }
                     
                     val connectionState by viewModel.connectionState.collectAsState()
                     val profiles by viewModel.profiles.collectAsState()
