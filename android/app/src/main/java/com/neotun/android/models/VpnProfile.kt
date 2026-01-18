@@ -1,6 +1,7 @@
 package com.neotun.android.models
 
 import kotlinx.serialization.Serializable
+import java.io.Serializable as JavaSerializable
 
 @Serializable
 data class VpnProfile(
@@ -13,14 +14,14 @@ data class VpnProfile(
     val settings: VpnSettings = VpnSettings(),
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsed: Long? = null
-)
+) : JavaSerializable
 
 private fun generateId(): String {
     return "profile_${System.currentTimeMillis()}_${(1000..9999).random()}"
 }
 
 @Serializable
-enum class VpnProtocol {
+enum class VpnProtocol : JavaSerializable {
     VMESS,
     VLESS,
     TROJAN,
@@ -28,7 +29,7 @@ enum class VpnProtocol {
 }
 
 @Serializable
-sealed class VpnCredentials {
+sealed class VpnCredentials : JavaSerializable {
     @Serializable
     data class VMess(
         val userId: String,
@@ -62,20 +63,20 @@ data class VpnSettings(
     val tlsSettings: TlsSettings? = null,
     val wsSettings: WebSocketSettings? = null,
     val realitySettings: RealitySettings? = null
-)
+) : JavaSerializable
 
 @Serializable
 data class TlsSettings(
     val serverName: String? = null,
     val allowInsecure: Boolean = false,
     val alpn: List<String> = emptyList()
-)
+) : JavaSerializable
 
 @Serializable
 data class WebSocketSettings(
     val path: String = "/",
     val headers: Map<String, String> = emptyMap()
-)
+) : JavaSerializable
 
 @Serializable
 data class RealitySettings(
@@ -83,4 +84,4 @@ data class RealitySettings(
     val shortId: String,
     val serverName: String,
     val fingerprint: String = "chrome"
-)
+) : JavaSerializable
