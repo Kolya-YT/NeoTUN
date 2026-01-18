@@ -12,9 +12,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.neotun.android.database.AppDatabase
 import com.neotun.android.models.VpnProfile
-import com.neotun.android.repository.ProfileRepository
 import com.neotun.android.ui.screens.AddProfileScreen
 import com.neotun.android.ui.screens.LogsScreen
 import com.neotun.android.ui.screens.MainScreen
@@ -26,9 +24,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val database = AppDatabase.getDatabase(this)
-        val repository = ProfileRepository(database.profileDao())
-        
         setContent {
             NeoTUNTheme {
                 Surface(
@@ -36,9 +31,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val viewModel: MainViewModel = viewModel {
-                        MainViewModel(repository)
-                    }
+                    val viewModel: MainViewModel = viewModel()
                     
                     val connectionState by viewModel.connectionState.collectAsState()
                     val profiles by viewModel.profiles.collectAsState()

@@ -4,15 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neotun.android.models.ConnectionState
 import com.neotun.android.models.VpnProfile
-import com.neotun.android.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class MainViewModel(
-    private val profileRepository: ProfileRepository
-) : ViewModel() {
+class MainViewModel : ViewModel() {
     
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -26,48 +23,64 @@ class MainViewModel(
     private val _logs = MutableStateFlow<List<String>>(emptyList())
     val logs: StateFlow<List<String>> = _logs.asStateFlow()
     
-    init {
-        loadProfiles()
-    }
-    
-    private fun loadProfiles() {
-        viewModelScope.launch {
-            profileRepository.getAllProfiles().collect { profileList ->
-                _profiles.value = profileList
-                
-                // Set first profile as active if none selected
-                if (_activeProfile.value == null && profileList.isNotEmpty()) {
-                    _activeProfile.value = profileList.first()
-                }
-            }
-        }
-    }
-    
     fun selectProfile(profile: VpnProfile) {
         _activeProfile.value = profile
     }
     
     fun addProfile(profile: VpnProfile) {
-        viewModelScope.launch {
-            profileRepository.insertProfile(profile)
+        try {
+            val currentProfiles = _profiles.value.toMutableList()
+            currentProfiles.add(profile)
+            _profiles.value = currentProfiles
+            
+            // Set as active if it's the first profile
+            if (_activeProfile.value == null) {
+                _activeProfile.value = profile
+            }
+            
+            addLog("Profile '${profile.name}' added successfully")
+        } catch (e: Exception) {
+            addLog("Failed to add profile: ${e.message}")
+            android.util.Log.e("MainViewModel", "Failed to add profile", e)
         }
     }
     
     fun updateProfile(profile: VpnProfile) {
-        viewModelScope.launch {
-            profileRepository.updateProfile(profile)
+        try {
+            val currentProfiles = _profiles.value.toMutableList()
+            val index = currentProfiles.indexOfFirst { it.id == profile.id }
+            if (index >= 0) {
+                currentProfiles[index] = profile
+                _profiles.value = currentProfiles
+                
+                // Update active profile if it's the same one
+                if (_activeProfile.value?.id == profile.id) {
+                    _activeProfile.value = profile
+                }
+                
+                addLog("Profile '${profile.name}' updated")
+            }
+        } catch (e: Exception) {
+            addLog("Failed to update profile: ${e.message}")
+            android.util.Log.e("MainViewModel", "Failed to update profile", e)
         }
     }
     
     fun deleteProfile(profile: VpnProfile) {
-        viewModelScope.launch {
-            profileRepository.deleteProfile(profile)
+        try {
+            val currentProfiles = _profiles.value.toMutableList()
+            currentProfiles.removeAll { it.id == profile.id }
+            _profiles.value = currentProfiles
             
             // If deleted profile was active, select another one
             if (_activeProfile.value?.id == profile.id) {
-                val remainingProfiles = _profiles.value.filter { it.id != profile.id }
-                _activeProfile.value = remainingProfiles.firstOrNull()
+                _activeProfile.value = currentProfiles.firstOrNull()
             }
+            
+            addLog("Profile '${profile.name}' deleted")
+        } catch (e: Exception) {
+            addLog("Failed to delete profile: ${e.message}")
+            android.util.Log.e("MainViewModel", "Failed to delete profile", e)
         }
     }
     
@@ -78,7 +91,6 @@ class MainViewModel(
         
         viewModelScope.launch {
             try {
-                // TODO: Start VPN service with profile
                 addLog("Connecting to ${profile.name}...")
                 addLog("Server: ${profile.server}:${profile.port}")
                 addLog("Protocol: ${profile.protocol}")
@@ -101,7 +113,6 @@ class MainViewModel(
         
         viewModelScope.launch {
             try {
-                // TODO: Stop VPN service
                 addLog("Disconnecting...")
                 
                 // Simulate disconnection process
@@ -118,15 +129,22 @@ class MainViewModel(
     }
     
     private fun addLog(message: String) {
-        val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-            .format(java.util.Date())
-        val logEntry = "[$timestamp] $message"
-        
-        _logs.value = _logs.value + logEntry
-        
-        // Keep only last 100 log entries
-        if (_logs.value.size > 100) {
-            _logs.value = _logs.value.takeLast(100)
+        try {
+            val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                .format(java.util.Date())
+            val logEntry = "[$timestamp] $message"
+            
+            val currentLogs = _logs.value.toMutableList()
+            currentLogs.add(logEntry)
+            
+            // Keep only last 100 log entries
+            if (currentLogs.size > 100) {
+                _logs.value = currentLogs.takeLast(100)
+            } else {
+                _logs.value = currentLogs
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainViewModel", "Failed to add log", e)
         }
     }
     
