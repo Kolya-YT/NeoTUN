@@ -14,10 +14,12 @@ data class VpnProfile(
     val settings: VpnSettings = VpnSettings(),
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsed: Long? = null
-) : JavaSerializable
-
-private fun generateId(): String {
-    return "profile_${System.currentTimeMillis()}_${(1000..9999).random()}"
+) : JavaSerializable {
+    companion object {
+        private fun generateId(): String {
+            return "profile_${System.currentTimeMillis()}_${(1000..9999).random()}"
+        }
+    }
 }
 
 @Serializable
