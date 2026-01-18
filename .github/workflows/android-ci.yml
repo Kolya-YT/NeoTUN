@@ -6,11 +6,16 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+
 jobs:
   build-xray-android:
     name: Build Xray for Android
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [arm64-v8a, armeabi-v7a, x86, x86_64]
     
@@ -22,7 +27,7 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '1.21'
         cache-dependency-path: xray-core/go.sum
@@ -38,36 +43,29 @@ jobs:
       env:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
-        # Set architecture-specific environment variables
         case "${{ matrix.arch }}" in
           "arm64-v8a")
-            export GOOS=android
-            export GOARCH=arm64
+            export GOOS=android GOARCH=arm64
             export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
             ;;
           "armeabi-v7a")
-            export GOOS=android
-            export GOARCH=arm
-            export GOARM=7
+            export GOOS=android GOARCH=arm GOARM=7
             export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang
             ;;
           "x86")
-            export GOOS=android
-            export GOARCH=386
+            export GOOS=android GOARCH=386
             export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android21-clang
             ;;
           "x86_64")
-            export GOOS=android
-            export GOARCH=amd64
+            export GOOS=android GOARCH=amd64
             export CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang
             ;;
         esac
         
-        export CGO_ENABLED=1
-        export CGO_CFLAGS="-O2 -Werror"
+        export CGO_ENABLED=1 CGO_CFLAGS="-O2 -Werror"
+        VERSION_LDFLAGS="-X github.com/xtls/xray-core/core.version=$(git describe --tags --always --dirty)"
         
-        # Build Xray
-        go build -v -o xray-${{ matrix.arch }} -trimpath -ldflags "-s -w -buildid=" ./main
+        go build -v -o xray-${{ matrix.arch }} -trimpath -ldflags "-s -w -buildid= $VERSION_LDFLAGS" ./main
 
     - name: Upload Xray binary
       uses: actions/upload-artifact@v4
@@ -96,89 +94,58 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Validate Gradle wrapper
-      uses: gradle/wrapper-validation-action@v2
-
     - name: Cache Gradle packages
       uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
+          ${{ github.workspace }}/.gradle
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+        restore-keys: ${{ runner.os }}-gradle-
 
     - name: Download Xray binaries
       uses: actions/download-artifact@v4
       with:
         path: xray-binaries
 
-    - name: Prepare Xray binaries for Android
+    - name: Prepare Xray binaries
       run: |
-        mkdir -p android/app/src/main/jniLibs/arm64-v8a
-        mkdir -p android/app/src/main/jniLibs/armeabi-v7a
-        mkdir -p android/app/src/main/jniLibs/x86
-        mkdir -p android/app/src/main/jniLibs/x86_64
-        
-        # Copy and rename binaries
+        mkdir -p android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86,x86_64}
         cp xray-binaries/xray-android-arm64-v8a/xray-arm64-v8a android/app/src/main/jniLibs/arm64-v8a/libxray.so
         cp xray-binaries/xray-android-armeabi-v7a/xray-armeabi-v7a android/app/src/main/jniLibs/armeabi-v7a/libxray.so
         cp xray-binaries/xray-android-x86/xray-x86 android/app/src/main/jniLibs/x86/libxray.so
         cp xray-binaries/xray-android-x86_64/xray-x86_64 android/app/src/main/jniLibs/x86_64/libxray.so
-        
-        # Make binaries executable
         chmod +x android/app/src/main/jniLibs/*/libxray.so
 
     - name: Setup Gradle Wrapper
       working-directory: android
       run: |
-        # Ensure gradle wrapper jar exists
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "Downloading Gradle Wrapper JAR..."
           mkdir -p gradle/wrapper
-          curl -L -o gradle/wrapper/gradle-wrapper.jar \
-            "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
+          curl -L -o gradle/wrapper/gradle-wrapper.jar "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
         fi
-        
-        # Ensure gradlew scripts exist and are correct
-        if [ ! -f "gradlew" ] || [ ! -s "gradlew" ]; then
-          echo "Downloading gradlew script..."
-          curl -L -o gradlew "https://github.com/gradle/gradle/raw/v8.4.0/gradlew"
-        fi
-        
-        if [ ! -f "gradlew.bat" ] || [ ! -s "gradlew.bat" ]; then
-          echo "Downloading gradlew.bat script..."
-          curl -L -o gradlew.bat "https://github.com/gradle/gradle/raw/v8.4.0/gradlew.bat"
-        fi
-        
-        # Make gradlew executable
         chmod +x gradlew
-        
-        # Test wrapper
-        ./gradlew --version
 
-    - name: Build Debug APK
-      if: github.event_name == 'pull_request'
+    - name: Build APK
       working-directory: android
-      run: ./gradlew assembleDebug
-
-    - name: Build Release APK
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      working-directory: android
-      run: ./gradlew assembleRelease
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          ./gradlew assembleDebug --stacktrace
+        else
+          ./gradlew assembleRelease --stacktrace
+        fi
 
     - name: Upload Debug APK
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
       with:
-        name: neotun-debug.apk
+        name: neotun-debug-apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
 
     - name: Upload Release APK
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: actions/upload-artifact@v4
       with:
-        name: neotun-release.apk
+        name: neotun-release-apk
         path: android/app/build/outputs/apk/release/app-release.apk
-
