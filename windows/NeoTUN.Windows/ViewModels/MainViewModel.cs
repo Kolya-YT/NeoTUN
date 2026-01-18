@@ -58,6 +58,27 @@ namespace NeoTUN.Windows.ViewModels
             AddProfileCommand = new RelayCommand(AddProfile);
             DeleteProfileCommand = new RelayCommand<VpnProfile>(DeleteProfile);
             ImportFromUriCommand = new RelayCommand<string>(ImportFromUri);
+            
+            // Add sample profile for testing
+            AddSampleProfile();
+        }
+        
+        private void AddSampleProfile()
+        {
+            var sampleProfile = new VpnProfile(
+                Guid.NewGuid().ToString(),
+                "Sample VPN Server",
+                VpnProtocol.VMess,
+                "example.com",
+                443,
+                new VpnCredentials.VMess("sample-user-id", 0, "auto"),
+                new VpnSettings(),
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            );
+            
+            Profiles.Add(sampleProfile);
+            SelectedProfile = sampleProfile;
+            AddLog("Sample profile added for testing");
         }
         
         public ObservableCollection<VpnProfile> Profiles { get; }
