@@ -29,7 +29,17 @@
                 <ListBox Grid.Row="2" 
                          ItemsSource="{Binding Profiles}"
                          SelectedItem="{Binding SelectedProfile}"
-                         Background="Transparent" BorderThickness="0"/>
+                         Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="5">
+                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Server}" Foreground="Gray" FontSize="12"/>
+                                <TextBlock Text="{Binding Protocol}" Foreground="LightBlue" FontSize="10"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 
                 <StackPanel Grid.Row="3">
                     <Button Content="Import from URI" Background="#FF4CAF50" Foreground="White"
@@ -56,11 +66,13 @@
             </Border>
             
             <!-- Controls -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
                 <Button Content="Connect" Background="#FF4CAF50" Foreground="White"
-                        Command="{Binding ConnectCommand}" Margin="5" Padding="20,10"/>
+                        Command="{Binding ConnectCommand}" Margin="5" Padding="20,10"
+                        IsEnabled="{Binding CanConnect}"/>
                 <Button Content="Disconnect" Background="#FFF44336" Foreground="White"
-                        Command="{Binding DisconnectCommand}" Margin="5" Padding="20,10"/>
+                        Command="{Binding DisconnectCommand}" Margin="5" Padding="20,10"
+                        IsEnabled="{Binding CanDisconnect}"/>
             </StackPanel>
             
             <!-- Logs -->

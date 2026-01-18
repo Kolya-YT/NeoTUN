@@ -94,12 +94,14 @@ class MainViewModel : ViewModel() {
                 addLog("Connecting to ${profile.name}...")
                 addLog("Server: ${profile.server}:${profile.port}")
                 addLog("Protocol: ${profile.protocol}")
+                addLog("⚠️ SIMULATION MODE - No real VPN connection")
                 
                 // Simulate connection process
                 kotlinx.coroutines.delay(2000)
                 
                 _connectionState.value = ConnectionState.CONNECTED
-                addLog("Connected successfully!")
+                addLog("✅ Simulation connected successfully!")
+                addLog("Note: This is a demo - no actual VPN tunnel created")
                 
             } catch (e: Exception) {
                 _connectionState.value = ConnectionState.ERROR

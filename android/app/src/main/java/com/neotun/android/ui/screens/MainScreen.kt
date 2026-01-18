@@ -217,11 +217,22 @@ private fun ConnectionStatsCard() {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "Connection Stats",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Connection Stats",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "(DEMO)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFF9800),
+                    fontWeight = FontWeight.Bold
+                )
+            }
             
             Spacer(modifier = Modifier.height(12.dp))
             
@@ -229,8 +240,8 @@ private fun ConnectionStatsCard() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem(label = "Upload", value = "1.2 MB")
-                StatItem(label = "Download", value = "5.8 MB")
+                StatItem(label = "Upload", value = "0 MB")
+                StatItem(label = "Download", value = "0 MB")
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -239,8 +250,8 @@ private fun ConnectionStatsCard() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem(label = "Duration", value = "00:15:32")
-                StatItem(label = "Speed", value = "2.1 MB/s")
+                StatItem(label = "Duration", value = "00:00:00")
+                StatItem(label = "Status", value = "Simulation")
             }
         }
     }
