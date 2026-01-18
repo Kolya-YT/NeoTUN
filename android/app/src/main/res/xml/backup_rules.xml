@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<full-backup-content>
-    <!-- Exclude sensitive VPN data from backup -->
-    <exclude domain="sharedpref" path="vpn_profiles.xml"/>
-    <exclude domain="sharedpref" path="app_settings.xml"/>
-    <exclude domain="database" path="vpn_database.db"/>
-    <exclude domain="file" path="xray_configs/"/>
-</full-backup-content>
