@@ -59,18 +59,18 @@ jobs:
           Copy-Item build/neotun.exe                     windows/
           Copy-Item vendor/windivert/x64/WinDivert.dll   windows/
           Copy-Item vendor/windivert/x64/WinDivert64.sys windows/
-          pyinstaller --onedir --noconsole `
+          pyinstaller --onefile --noconsole `
             --name "NeoTUN" `
             --add-data "windows/neotun.exe;." `
             --add-data "windows/WinDivert.dll;." `
             --add-data "windows/WinDivert64.sys;." `
             windows/gui.py
-          Compress-Archive -Path dist/NeoTUN -DestinationPath ${{ github.workspace }}/NeoTUN-Windows.zip
+          Copy-Item dist/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: ${{ github.workspace }}/NeoTUN-Windows.zip
+          path: ${{ github.workspace }}/NeoTUN-Windows.exe
 
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
@@ -165,5 +165,5 @@ jobs:
             **Windows**: скачай `NeoTUN-Windows.zip`, распакуй, запусти `NeoTUN.exe` от имени администратора.
             **Android**: скачай и установи `NeoTUN-Android.apk`.
           files: |
-            release-files/NeoTUN-Windows.zip
+            release-files/NeoTUN-Windows.exe
             release-files/NeoTUN-Android.apk
