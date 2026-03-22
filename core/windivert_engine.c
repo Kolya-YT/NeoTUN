@@ -252,37 +252,31 @@ static int extract_sni_string(const uint8_t *payload, UINT payload_len,
  * Эти домены либо не заблокированы, либо split их ломает.
  */
 /*
- * Домены которые НЕ трогаем.
- * Discord: WebSocket — split ломает handshake.
- * YouTube CDN убран из списка — провайдер может блокировать
- * googlevideo.com так же как youtube.com, bypass нужен.
+ * Проверяем нужен ли bypass для данного SNI.
+ * Если blacklist задан — bypass только для доменов из него.
+ * Если blacklist пуст — bypass для всех.
  */
-static const char *NO_TOUCH[] = {
-    "discord.com",
-    "discordapp.com",
-    "discordapp.net",
-    "discord.gg",
-    "discord.media",
-    "discordcdn.com",
-    NULL
-};
+static int domain_matches(const char *sni, const char *suffix)
+{
+    size_t sni_len = strlen(sni);
+    size_t suf_len = strlen(suffix);
+    if (sni_len < suf_len) return 0;
+    const char *tail = sni + sni_len - suf_len;
+    return strcmp(tail, suffix) == 0 &&
+           (tail == sni || *(tail - 1) == '.');
+}
 
 static int should_bypass(const char *sni)
 {
-    if (!sni || sni[0] == '\0') return 1;
-
-    size_t sni_len = strlen(sni);
-    for (int i = 0; NO_TOUCH[i]; i++) {
-        const char *suffix = NO_TOUCH[i];
-        size_t suf_len = strlen(suffix);
-        if (sni_len >= suf_len) {
-            const char *tail = sni + sni_len - suf_len;
-            if (strcmp(tail, suffix) == 0 &&
-                (tail == sni || *(tail - 1) == '.'))
-                return 0;
-        }
+    /* Нет blacklist — bypass всего */
+    if (!g_opts.use_blacklist || !g_opts.blacklist || g_opts.blacklist_n == 0)
+        return 1;
+    if (!sni || sni[0] == '\0') return 0;
+    for (int i = 0; i < g_opts.blacklist_n; i++) {
+        if (g_opts.blacklist[i] && domain_matches(sni, g_opts.blacklist[i]))
+            return 1;
     }
-    return 1;
+    return 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -388,7 +382,9 @@ int wd_engine_start(const wd_engine_opts_t *opts)
     const char *filter = opts->filter[0]
         ? opts->filter
         : "outbound and tcp and tcp.PayloadLength > 0 and "
-          "(tcp.DstPort == 443 or tcp.DstPort == 80 or tcp.DstPort == 8443)";
+          "(tcp.DstPort == 443 or tcp.DstPort == 80 or tcp.DstPort == 8443 or "
+          "tcp.DstPort == 8080 or tcp.DstPort == 2053 or tcp.DstPort == 2083 or "
+          "tcp.DstPort == 2087 or tcp.DstPort == 2096)";
 
     g_handle = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, 0, 0);
     if (g_handle == INVALID_HANDLE_VALUE) {

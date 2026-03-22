@@ -16,7 +16,13 @@ else:
     BASE = os.path.dirname(os.path.abspath(__file__))
 
 BINARY = os.path.join(BASE, "neotun.exe")
-ARGS   = "-w -t -s 2 -o -f 5"
+
+# Режимы bypass
+MODES = {
+    "Всё":      "-w -t -s 2 -o -f 5",
+    "YouTube":  "-w -t -s 2 -o -f 5 -Y",
+    "Discord":  "-w -t -s 2 -o -f 5 -D",
+}
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -185,6 +191,7 @@ class App(ctk.CTk):
         self.configure(fg_color=BG)
         self.process  = None
         self._running = False
+        self._mode    = "Всё"
         self._build()
 
     def _build(self):
@@ -229,7 +236,29 @@ class App(ctk.CTk):
         if not admin:
             self._btn.configure(state="disabled")
 
-        # ── youtube row ──
+        # ── mode selector ──
+        mode_frame = ctk.CTkFrame(body, fg_color=CARD, corner_radius=12)
+        mode_frame.pack(fill="x", pady=(10, 0))
+
+        ctk.CTkLabel(mode_frame, text="РЕЖИМ ОБХОДА",
+                     font=("Segoe UI", 9), text_color=MUTED).pack(anchor="w", padx=14, pady=(10, 4))
+
+        seg_frame = ctk.CTkFrame(mode_frame, fg_color=MUTED2, corner_radius=8)
+        seg_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        self._mode_btns = {}
+        for label in MODES:
+            btn = ctk.CTkButton(
+                seg_frame, text=label,
+                height=30, corner_radius=6,
+                font=("Segoe UI", 11),
+                fg_color=ACCENT if label == self._mode else "transparent",
+                hover_color="#303055",
+                text_color=WHITE if label == self._mode else MUTED,
+                command=lambda l=label: self._set_mode(l)
+            )
+            btn.pack(side="left", fill="x", expand=True, padx=3, pady=3)
+            self._mode_btns[label] = btn
         yt = ctk.CTkFrame(body, fg_color=CARD, corner_radius=14)
         yt.pack(fill="x", pady=(14,0))
 
@@ -259,8 +288,8 @@ class App(ctk.CTk):
         info = ctk.CTkFrame(body, fg_color="transparent")
         info.pack(fill="x", pady=(12,0))
 
-        self._mk_stat(info, "⚡", "РЕЖИМ",   "TLS Split + OOB").pack(side="left",fill="x",expand=True,padx=(0,6))
-        self._mk_stat(info, "🔒", "ПРОКСИ",  "SOCKS5 :1080").pack(side="left",fill="x",expand=True,padx=(6,0))
+        self._mk_stat(info, "⚡", "МЕТОД",   "TLS Split + Fake TTL").pack(side="left",fill="x",expand=True,padx=(0,6))
+        self._mk_stat(info, "🔒", "ПРОКСИ",  "Системный (WinDivert)").pack(side="left",fill="x",expand=True,padx=(6,0))
 
         # ── log ──
         log_wrap = ctk.CTkFrame(body, fg_color=CARD, corner_radius=14)
@@ -290,6 +319,16 @@ class App(ctk.CTk):
                      text_color="#6868A0").pack(anchor="w",padx=14,pady=(3,12))
         return f
 
+    # ── mode ──
+    def _set_mode(self, label):
+        if self._running: return   # нельзя менять во время работы
+        self._mode = label
+        for l, btn in self._mode_btns.items():
+            btn.configure(
+                fg_color=ACCENT if l == label else "transparent",
+                text_color=WHITE if l == label else MUTED
+            )
+
     # ── toggle ──
     def _toggle(self):
         if self._running: self._stop()
@@ -298,9 +337,10 @@ class App(ctk.CTk):
     def _start(self):
         if not os.path.exists(BINARY):
             self._log_line(f"[ERR] не найден: {BINARY}"); return
+        args = MODES.get(self._mode, MODES["Всё"])
         try:
             self.process = subprocess.Popen(
-                [BINARY]+ARGS.split(),
+                [BINARY] + args.split(),
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
@@ -310,7 +350,7 @@ class App(ctk.CTk):
         self._btn.set_active(True)
         self._btn.set_text("ОТКЛЮЧИТЬ")
         self._indicator.set(True)
-        self._log_line(f"Запущен: {BINARY} {ARGS}")
+        self._log_line(f"Запущен [{self._mode}]: {BINARY} {args}")
         threading.Thread(target=self._read_output, daemon=True).start()
         self.after(2500, self._check_yt)
 

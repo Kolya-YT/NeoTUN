@@ -48,6 +48,9 @@ static void print_usage(const char *prog) {
            "  -P <port>     Upstream SOCKS5 proxy port (default: 1080)\n"
 #ifdef _WIN32
            "  -w            WinDivert mode (system-wide, no proxy needed, requires admin)\n"
+           "  -Y            Bypass only YouTube domains\n"
+           "  -D            Bypass only Discord domains\n"
+           "  (no -Y/-D)    Bypass all HTTPS traffic\n"
 #endif
            "  -h            Show this help\n",
            prog);
@@ -83,6 +86,20 @@ int main(int argc, char *argv[]) {
     memset(&upstream, 0, sizeof(upstream));
     int upstream_port = 1080;
     int windivert_mode = 0;
+    /* Blacklist доменов для bypass (NULL = все) */
+    static const char *blacklist_youtube[] = {
+        "youtube.com", "youtu.be", "googlevideo.com",
+        "ytimg.com", "yt3.ggpht.com", "googleapis.com",
+        NULL
+    };
+    static const char *blacklist_discord[] = {
+        "discord.com", "discordapp.com", "discordapp.net",
+        "discord.gg", "discord.media", "discordcdn.com",
+        "gateway.discord.gg",
+        NULL
+    };
+    int mode_youtube = 0; /* -Y флаг */
+    int mode_discord = 0; /* -D флаг */
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-i") == 0 && i+1 < argc) {
@@ -105,6 +122,10 @@ int main(int argc, char *argv[]) {
             upstream_port = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-w") == 0) {
             windivert_mode = 1;
+        } else if (strcmp(argv[i], "-Y") == 0) {
+            mode_youtube = 1;
+        } else if (strcmp(argv[i], "-D") == 0) {
+            mode_discord = 1;
         } else if (strcmp(argv[i], "-h") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -116,9 +137,22 @@ int main(int argc, char *argv[]) {
     if (windivert_mode) {
         wd_engine_opts_t wd = {0};
         wd.opts = opts;
-        /* Фильтр: исходящий TCP:443 с payload (TLS) */
+        /* Режимы: -Y только YouTube, -D только Discord, иначе всё */
+        if (mode_youtube && !mode_discord) {
+            wd.use_blacklist = 1;
+            wd.blacklist = blacklist_youtube;
+            wd.blacklist_n = 6;
+        } else if (mode_discord && !mode_youtube) {
+            wd.use_blacklist = 1;
+            wd.blacklist = blacklist_discord;
+            wd.blacklist_n = 7;
+        } else {
+            wd.use_blacklist = 0; /* bypass всего */
+        }
         strncpy(wd.filter,
-                "outbound and tcp.DstPort == 443 and tcp.PayloadLength > 0",
+                "outbound and tcp.PayloadLength > 0 and "
+                "(tcp.DstPort == 443 or tcp.DstPort == 80 or tcp.DstPort == 8443 or "
+                "tcp.DstPort == 8080 or tcp.DstPort == 2053 or tcp.DstPort == 2083)",
                 sizeof(wd.filter) - 1);
         printf("NeoTUN - DPI bypass (WinDivert mode, system-wide)\n");
         printf("Options: split=%d disorder=%d fake_ttl=%d tlsrec=%d\n",
