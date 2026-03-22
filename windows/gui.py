@@ -16,7 +16,7 @@ else:
 
 BINARY = os.path.join(BASE, "neotun.exe")
 
-DEFAULT_ARGS = "-t -s 2 -o"
+DEFAULT_ARGS = "-w -t -s 2 -o -f 5"
 TEST_TIMEOUT = 5
 
 # ── appearance ─────────────────────────────────────────────────────────────────
@@ -173,6 +173,8 @@ class App(ctk.CTk):
         self.lbl_status.configure(text="● Работает", text_color=GREEN)
         self._log(f"Запущен: {' '.join(cmd)}")
         threading.Thread(target=self._read_output, daemon=True).start()
+        # Автопроверка YouTube через 3 секунды
+        self.after(3000, self._check_yt)
 
     def _stop(self):
         if self.process:

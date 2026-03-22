@@ -23,8 +23,16 @@ class DpiVpnService : VpnService() {
         var isRunning = false
             private set
 
+        var loadError: String? = null
+            private set
+
         init {
-            System.loadLibrary("neotun_bypass")
+            try {
+                System.loadLibrary("neotun_bypass")
+            } catch (e: UnsatisfiedLinkError) {
+                loadError = "neotun_bypass: ${e.message}"
+                android.util.Log.e("NeoTUN", "Failed to load neotun_bypass", e)
+            }
         }
     }
 
@@ -44,6 +52,14 @@ class DpiVpnService : VpnService() {
 
     private fun startBypass() {
         if (isRunning) return
+
+        // Check if native libraries loaded successfully
+        val libErr = DpiVpnService.loadError ?: TProxyService.loadError
+        if (libErr != null) {
+            Log.e(TAG, "Native library load failed: $libErr")
+            stopSelf()
+            return
+        }
 
         createNotificationChannel()
         startForeground(NOTIF_ID, buildNotification("Работает"))
@@ -88,7 +104,7 @@ class DpiVpnService : VpnService() {
         val configFile = File.createTempFile("neotun_cfg", ".yml", cacheDir)
         configFile.writeText(config)
 
-        TProxyService.TProxyStartService(configFile.absolutePath, fd)
+        TProxyService.startService(configFile.absolutePath, fd)
 
         isRunning = true
         Log.i(TAG, "DPI bypass started, tun_fd=$fd")
@@ -96,7 +112,7 @@ class DpiVpnService : VpnService() {
     }
 
     private fun stopBypass() {
-        TProxyService.TProxyStopService()
+        TProxyService.stopService()
         nativeStopProxy()
         tunInterface?.close()
         tunInterface = null
