@@ -11,6 +11,10 @@ set(SOURCES
 )
 
 if(WIN32)
+    list(APPEND SOURCES core/gui.c)
+endif()
+
+if(WIN32)
     set(WINDIVERT_DIR "${CMAKE_SOURCE_DIR}/vendor/windivert" CACHE PATH "Path to WinDivert SDK")
 
     if(EXISTS "${WINDIVERT_DIR}/include/windivert.h")
@@ -23,12 +27,12 @@ if(WIN32)
     endif()
 endif()
 
-add_executable(neotun ${SOURCES})
+add_executable(neotun WIN32 ${SOURCES})
 
 target_include_directories(neotun PRIVATE core)
 
 if(WIN32)
-    target_link_libraries(neotun ws2_32)
+    target_link_libraries(neotun ws2_32 comctl32)
 
     if(HAVE_WINDIVERT)
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)

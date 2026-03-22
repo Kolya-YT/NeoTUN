@@ -243,13 +243,28 @@ static int extract_sni_string(const uint8_t *payload, UINT payload_len,
  * Домены которые НЕ нужно трогать.
  * Discord использует WebSocket — split ломает его handshake.
  */
+/*
+ * Домены которые НЕ трогаем:
+ * - Discord: WebSocket, split ломает handshake
+ * - googlevideo.com: YouTube CDN видео, уже доступен без bypass
+ * - ytimg.com, ggpht.com: YouTube превью/картинки
+ * - gstatic.com, googleapis.com: Google CDN
+ * Эти домены либо не заблокированы, либо split их ломает.
+ */
 static const char *NO_TOUCH[] = {
+    /* Discord */
     "discord.com",
     "discordapp.com",
     "discordapp.net",
     "discord.gg",
     "discord.media",
     "discordcdn.com",
+    /* YouTube CDN — видео грузится отсюда, не заблокировано */
+    "googlevideo.com",
+    "ytimg.com",
+    "ggpht.com",
+    "gstatic.com",
+    "googleapis.com",
     NULL
 };
 

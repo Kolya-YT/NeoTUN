@@ -10,6 +10,7 @@
   #include <ws2tcpip.h>
   #include <process.h>
   #include "windivert_engine.h"
+  #include "gui.h"
   typedef HANDLE thread_t;
 #else
   #include <pthread.h>
@@ -58,6 +59,13 @@ int main(int argc, char *argv[]) {
     WSAStartup(MAKEWORD(2,2), &wsa);
 #else
     signal(SIGPIPE, SIG_IGN);
+#endif
+
+    /* Без аргументов — запускаем GUI */
+#ifdef _WIN32
+    if (argc == 1) {
+        return gui_run();
+    }
 #endif
 
     const char *listen_ip = "127.0.0.1";
