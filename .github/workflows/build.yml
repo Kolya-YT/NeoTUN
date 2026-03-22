@@ -42,25 +42,36 @@ jobs:
           Copy-Item "$src/x64/WinDivert.lib"     vendor/windivert/x64/
           Copy-Item "$src/x64/WinDivert64.sys"   vendor/windivert/x64/
 
-      - name: Build
+      - name: Build neotun.exe (CMake)
         run: |
           New-Item -ItemType Directory -Force build | Out-Null
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
-      - name: Package
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build GUI exe (PyInstaller)
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item build/neotun.exe                     dist/
-          Copy-Item vendor/windivert/x64/WinDivert.dll   dist/
-          Copy-Item vendor/windivert/x64/WinDivert64.sys dist/
-          Copy-Item windows/gui.py                       dist/
-          Compress-Archive dist/* NeoTUN-Windows.zip
+          pip install customtkinter pyinstaller --quiet
+          # Copy neotun.exe + WinDivert files next to gui.py so PyInstaller bundles them
+          Copy-Item build/neotun.exe                     windows/
+          Copy-Item vendor/windivert/x64/WinDivert.dll   windows/
+          Copy-Item vendor/windivert/x64/WinDivert64.sys windows/
+          pyinstaller --onefile --noconsole `
+            --name "NeoTUN" `
+            --add-data "windows/neotun.exe;." `
+            --add-data "windows/WinDivert.dll;." `
+            --add-data "windows/WinDivert64.sys;." `
+            windows/gui.py
+          Copy-Item dist/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: ${{ github.workspace }}/NeoTUN-Windows.zip
+          path: ${{ github.workspace }}/NeoTUN-Windows.exe
 
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
@@ -148,5 +159,5 @@ jobs:
           name: NeoTUN ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            release-files/NeoTUN-Windows.zip
+            release-files/NeoTUN-Windows.exe
             release-files/NeoTUN-Android.apk

@@ -1,5 +1,4 @@
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+import customtkinter as ctk
 import subprocess
 import threading
 import socket
@@ -8,30 +7,41 @@ import os
 import sys
 import ctypes
 
-BINARY = os.path.join(os.path.dirname(__file__), '..', 'build', 'neotun.exe')
+# ── paths ──────────────────────────────────────────────────────────────────────
+# When bundled by PyInstaller, data files land in sys._MEIPASS
+if getattr(sys, "frozen", False):
+    BASE = sys._MEIPASS
+else:
+    BASE = os.path.dirname(os.path.abspath(__file__))
 
-SERVICES = [
-    ("YouTube",   "www.youtube.com",   443),
-    ("Discord",   "discord.com",       443),
-    ("Speedtest", "www.speedtest.net", 443),
-]
+BINARY = os.path.join(BASE, "neotun.exe")
 
-DEFAULT_ARGS = "-w -t -d -f 5"
-TEST_TIMEOUT = 4
+DEFAULT_ARGS = "-t -s 2 -o"
+TEST_TIMEOUT = 5
 
+# ── appearance ─────────────────────────────────────────────────────────────────
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
+BG        = "#0E0E1C"
+CARD      = "#1A1A2E"
+ACCENT    = "#4F8EF7"
+GREEN     = "#27AE60"
+RED       = "#E74C3C"
+TEXT      = "#CCCCEE"
+MUTED     = "#555577"
+
+# ── helpers ────────────────────────────────────────────────────────────────────
 def is_admin():
     try:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
     except Exception:
         return False
 
-
 def relaunch_as_admin():
     ctypes.windll.shell32.ShellExecuteW(
         None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     sys.exit(0)
-
 
 def test_host(host, timeout=TEST_TIMEOUT):
     try:
@@ -52,155 +62,127 @@ def test_host(host, timeout=TEST_TIMEOUT):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         s = socket.create_connection((host, 443), timeout=timeout)
-        s.settimeout(timeout)
         with ctx.wrap_socket(s, server_hostname=host) as t:
             t.sendall(f"HEAD / HTTP/1.0\r\nHost: {host}\r\n\r\n".encode())
             return len(t.recv(64)) > 0
     except Exception:
         return False
 
-
-def test_all():
-    results = {}
-    threads = []
-    def _t(name, host, _port):
-        results[name] = test_host(host)
-    for name, host, port in SERVICES:
-        th = threading.Thread(target=_t, args=(name, host, port), daemon=True)
-        th.start(); threads.append(th)
-    for th in threads:
-        th.join(TEST_TIMEOUT + 2)
-    return results
-
-
-class App(tk.Tk):
+# ── main window ────────────────────────────────────────────────────────────────
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("NeoTUN - DPI")
+        self.geometry("420x540")
         self.resizable(False, False)
+        self.configure(fg_color=BG)
         self.process = None
-        self._build_ui()
+        self._build()
 
-    def _build_ui(self):
-        pad = {"padx": 12, "pady": 6}
+    def _build(self):
         admin = is_admin()
 
+        # ── admin warning ──
         if not admin:
-            bar = tk.Frame(self, bg="#c0392b")
-            bar.grid(row=0, column=0, columnspan=2, sticky="ew")
-            tk.Label(bar, text="  Нет прав администратора",
-                     bg="#c0392b", fg="white", font=("Segoe UI", 9)
-                     ).pack(side="left", pady=4)
-            ttk.Button(bar, text="Перезапустить от администратора",
-                       command=relaunch_as_admin).pack(side="right", padx=8, pady=2)
+            warn = ctk.CTkFrame(self, fg_color="#3A1010", corner_radius=8)
+            warn.pack(fill="x", padx=16, pady=(12, 0))
+            ctk.CTkLabel(warn, text="⚠  Нет прав администратора",
+                         text_color="#FF6B6B", font=("Segoe UI", 11)).pack(side="left", padx=12, pady=6)
+            ctk.CTkButton(warn, text="Перезапустить", width=130, height=28,
+                          fg_color="#7A2020", hover_color="#9A3030",
+                          command=relaunch_as_admin).pack(side="right", padx=8, pady=4)
 
-        frm = ttk.LabelFrame(self, text="Статус")
-        frm.grid(row=1, column=0, columnspan=2, sticky="ew", **pad)
-        frm.columnconfigure(1, weight=1)
+        # ── header ──
+        ctk.CTkLabel(self, text="NeoTUN", font=("Segoe UI", 26, "bold"),
+                     text_color="white").pack(pady=(20, 0))
+        ctk.CTkLabel(self, text="DPI BYPASS", font=("Segoe UI", 11),
+                     text_color=MUTED).pack()
 
-        self.status_icon = tk.Label(frm, text="⬤", font=("Segoe UI", 16), fg="#aaa")
-        self.status_icon.grid(row=0, column=0, padx=(10, 6), pady=8)
+        # ── big toggle button ──
+        self.btn_toggle = ctk.CTkButton(
+            self, text="ЗАПУСТИТЬ", width=160, height=160,
+            corner_radius=80,
+            font=("Segoe UI", 15, "bold"),
+            fg_color=CARD, hover_color="#252540",
+            border_width=2, border_color="#3A3A5C",
+            text_color=TEXT,
+            command=self._toggle
+        )
+        self.btn_toggle.pack(pady=20)
 
-        self.status_var = tk.StringVar(value="Остановлен")
-        tk.Label(frm, textvariable=self.status_var,
-                 font=("Segoe UI", 11, "bold")).grid(row=0, column=1, sticky="w")
+        # ── status label ──
+        self.lbl_status = ctk.CTkLabel(self, text="● Остановлен",
+                                        font=("Segoe UI", 13),
+                                        text_color=MUTED)
+        self.lbl_status.pack()
 
-        frm_svc = ttk.LabelFrame(self, text="Сервисы")
-        frm_svc.grid(row=2, column=0, columnspan=2, sticky="ew", **pad)
+        # ── youtube check card ──
+        card = ctk.CTkFrame(self, fg_color=CARD, corner_radius=12)
+        card.pack(fill="x", padx=16, pady=(16, 0))
 
-        self.svc_icons = {}
-        self.svc_lbls = {}
-        for i, (name, host, port) in enumerate(SERVICES):
-            ic = tk.Label(frm_svc, text="⬤", font=("Segoe UI", 12), fg="#aaa")
-            ic.grid(row=0, column=i*2, padx=(10, 2), pady=6)
-            lb = tk.Label(frm_svc, text=name, font=("Segoe UI", 9), fg="#aaa")
-            lb.grid(row=0, column=i*2+1, padx=(0, 12), pady=6)
-            self.svc_icons[name] = ic
-            self.svc_lbls[name] = lb
+        row = ctk.CTkFrame(card, fg_color="transparent")
+        row.pack(fill="x", padx=14, pady=10)
 
-        self.btn_check = ttk.Button(frm_svc, text="Проверить",
-                                     command=self._do_check)
-        self.btn_check.grid(row=0, column=len(SERVICES)*2, padx=(4, 10), pady=4)
+        ctk.CTkLabel(row, text="YouTube", font=("Segoe UI", 13, "bold"),
+                     text_color=TEXT).pack(side="left")
 
-        self.btn_start = ttk.Button(self, text="▶  Запустить",
-                                     command=self.start,
-                                     state="normal" if admin else "disabled")
-        self.btn_start.grid(row=3, column=0, padx=(12, 4), pady=6, sticky="ew")
+        self.lbl_yt = ctk.CTkLabel(row, text="—", font=("Segoe UI", 12),
+                                    text_color=MUTED)
+        self.lbl_yt.pack(side="left", padx=10)
 
-        self.btn_stop = ttk.Button(self, text="■  Остановить",
-                                    command=self.stop, state="disabled")
-        self.btn_stop.grid(row=3, column=1, padx=(4, 12), pady=6, sticky="ew")
+        self.btn_check = ctk.CTkButton(row, text="Проверить", width=100, height=28,
+                                        fg_color="#252540", hover_color="#303050",
+                                        text_color=TEXT, font=("Segoe UI", 11),
+                                        command=self._check_yt)
+        self.btn_check.pack(side="right")
 
-        self.log = scrolledtext.ScrolledText(self, height=9, width=50,
-                                              state="disabled", font=("Consolas", 9))
-        self.log.grid(row=4, column=0, columnspan=2, padx=12, pady=(0, 10))
+        # ── log ──
+        self.log = ctk.CTkTextbox(self, height=120, font=("Consolas", 9),
+                                   fg_color=CARD, text_color="#8888AA",
+                                   corner_radius=10, border_width=0)
+        self.log.pack(fill="x", padx=16, pady=12)
+        self.log.configure(state="disabled")
 
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
+        if not admin:
+            self.btn_toggle.configure(state="disabled")
 
-    def _log(self, text):
-        self.log.config(state="normal")
-        self.log.insert(tk.END, text + "\n")
-        self.log.see(tk.END)
-        self.log.config(state="disabled")
+    # ── toggle ──
+    def _toggle(self):
+        if self.process:
+            self._stop()
+        else:
+            self._start()
 
-    def _set_status(self, text, color):
-        self.status_var.set(text)
-        self.status_icon.config(fg=color)
-
-    def _update_svc(self, results):
-        for name, ok in results.items():
-            c = "#27ae60" if ok else "#c0392b"
-            if name in self.svc_icons: self.svc_icons[name].config(fg=c)
-            if name in self.svc_lbls:  self.svc_lbls[name].config(fg=c)
-
-    def _do_check(self):
-        self.btn_check.config(state="disabled")
-        self._log("Проверяю...")
-        def _run():
-            res = test_all()
-            self.after(0, self._update_svc, res)
-            ok  = [n for n, v in res.items() if v]
-            bad = [n for n, v in res.items() if not v]
-            parts = []
-            if ok:  parts.append("✓ " + ", ".join(ok))
-            if bad: parts.append("✗ " + ", ".join(bad))
-            self.after(0, self._log, "  ".join(parts))
-            self.after(0, self.btn_check.config, {"state": "normal"})
-        threading.Thread(target=_run, daemon=True).start()
-
-    def start(self):
+    def _start(self):
         if not os.path.exists(BINARY):
-            messagebox.showerror("Ошибка",
-                f"Бинарник не найден:\n{BINARY}\n\nСобери проект через CMake.")
+            self._log(f"[ERR] neotun.exe не найден: {BINARY}")
             return
-
         cmd = [BINARY] + DEFAULT_ARGS.split()
         try:
             self.process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, creationflags=subprocess.CREATE_NO_WINDOW
             )
         except Exception as e:
-            messagebox.showerror("Ошибка запуска", str(e))
+            self._log(f"[ERR] {e}")
             return
 
-        self.btn_start.config(state="disabled")
-        self.btn_stop.config(state="normal")
-        self._set_status("Работает", "#27ae60")
+        self.btn_toggle.configure(text="ОСТАНОВИТЬ", fg_color="#1A3A1A",
+                                   hover_color="#1E4A1E", border_color=GREEN,
+                                   text_color=GREEN)
+        self.lbl_status.configure(text="● Работает", text_color=GREEN)
         self._log(f"Запущен: {' '.join(cmd)}")
         threading.Thread(target=self._read_output, daemon=True).start()
 
-    def stop(self):
+    def _stop(self):
         if self.process:
             self.process.terminate()
             self.process = None
-        self.btn_start.config(state="normal" if is_admin() else "disabled")
-        self.btn_stop.config(state="disabled")
-        self._set_status("Остановлен", "#aaa")
-        for ic in self.svc_icons.values(): ic.config(fg="#aaa")
-        for lb in self.svc_lbls.values():  lb.config(fg="#aaa")
+        self.btn_toggle.configure(text="ЗАПУСТИТЬ", fg_color=CARD,
+                                   hover_color="#252540", border_color="#3A3A5C",
+                                   text_color=TEXT)
+        self.lbl_status.configure(text="● Остановлен", text_color=MUTED)
+        self.lbl_yt.configure(text="—", text_color=MUTED)
         self._log("Остановлен.")
 
     def _read_output(self):
@@ -213,12 +195,29 @@ class App(tk.Tk):
     def _on_exit(self):
         if self.process:
             self.process = None
-            self.btn_start.config(state="normal" if is_admin() else "disabled")
-            self.btn_stop.config(state="disabled")
-            self._set_status("Остановлен", "#aaa")
+            self.after(0, self._stop)
+
+    # ── check ──
+    def _check_yt(self):
+        self.btn_check.configure(state="disabled", text="...")
+        self.lbl_yt.configure(text="проверяю...", text_color=MUTED)
+        def _run():
+            ok = test_host("www.youtube.com")
+            color = GREEN if ok else RED
+            text  = "✓ Работает" if ok else "✗ Заблокирован"
+            self.after(0, self.lbl_yt.configure, {"text": text, "text_color": color})
+            self.after(0, self.btn_check.configure, {"state": "normal", "text": "Проверить"})
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── log ──
+    def _log(self, text):
+        self.log.configure(state="normal")
+        self.log.insert("end", text + "\n")
+        self.log.see("end")
+        self.log.configure(state="disabled")
 
     def on_close(self):
-        self.stop()
+        self._stop()
         self.destroy()
 
 
