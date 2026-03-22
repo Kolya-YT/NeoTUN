@@ -76,7 +76,7 @@ Java_com_neotun_dpi_DpiVpnService_nativeStartProxy(
 
     g_opts.split_pos    = split_pos;
     g_opts.disorder     = disorder;
-    g_opts.fake_ttl     = -1;
+    g_opts.fake_ttl     = 1;   /* always inject fake record with TTL=1 */
     g_opts.tlsrec_split = tlsrec_split;
     g_opts.oob          = oob;
 

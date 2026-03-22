@@ -21,7 +21,7 @@ BINARY = os.path.join(BASE, "neotun.exe")
 MODES = {
     "Всё":      "-w -t -s 2 -o -f 5",
     "YouTube":  "-w -t -s 2 -o -f 5 -Y",
-    "Discord":  "-w -t -s 2 -o -f 5 -D",
+    "Discord":  "-w -t -f 5 -D",
 }
 
 ctk.set_appearance_mode("dark")
