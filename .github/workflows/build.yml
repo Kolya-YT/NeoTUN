@@ -78,13 +78,14 @@ jobs:
   # ----------------------------------------------------------------
   build-android:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}/android
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Init nested submodules
+        run: git submodule update --init --recursive
+        working-directory: ${{ github.workspace }}
 
       - uses: actions/setup-java@v4
         with:
@@ -102,6 +103,7 @@ jobs:
             --sdk_root=$ANDROID_SDK_ROOT
 
       - name: Write local.properties
+        working-directory: ${{ github.workspace }}/android
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
       - name: Install Gradle 8.4
@@ -118,11 +120,11 @@ jobs:
           restore-keys: gradle-
 
       - name: Build APK
-        run: |
-          gradle assembleDebug --no-daemon --stacktrace
+        working-directory: ${{ github.workspace }}/android
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
-        run: find . -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
+        run: find ${{ github.workspace }}/android -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
 
       - uses: actions/upload-artifact@v4
         with:
