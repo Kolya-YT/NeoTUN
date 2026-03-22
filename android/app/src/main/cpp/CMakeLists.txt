@@ -12,7 +12,19 @@ set(TASK_DIR "${HEV_DIR}/third-part/hev-task-system")
 # ── collect sources helper ─────────────────────────────────────────────────────
 file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
 file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
-file(GLOB_RECURSE TASK_SRCS "${TASK_DIR}/src/*.c" "${TASK_DIR}/src/*.S")
+file(GLOB_RECURSE TASK_SRCS
+    "${TASK_DIR}/src/kern/*.c"
+    "${TASK_DIR}/src/kern/*.S")
+
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/arm/hev-task-execute-aarch64.s")
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/arm/hev-task-execute-arm.s")
+elseif(ANDROID_ABI STREQUAL "x86_64")
+    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/x86/hev-task-execute-x86_64.s")
+elseif(ANDROID_ABI STREQUAL "x86")
+    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/x86/hev-task-execute-x86.s")
+endif()
 file(GLOB_RECURSE HEV_SRCS  "${HEV_DIR}/src/*.c")
 
 # ── lwip ───────────────────────────────────────────────────────────────────────
