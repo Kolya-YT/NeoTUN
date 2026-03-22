@@ -1,15 +1,11 @@
 package com.neotun.dpi
 
-object TProxyService {
-    var loadError: String? = null
+import android.util.Log
 
+object TProxyService {
     init {
-        try {
-            System.loadLibrary("hev-socks5-tunnel")
-        } catch (e: UnsatisfiedLinkError) {
-            loadError = e.message
-            android.util.Log.e("NeoTUN", "Failed to load hev-socks5-tunnel", e)
-        }
+        System.loadLibrary("hev-socks5-tunnel")
+        Log.i("NeoTUN", "hev-socks5-tunnel loaded")
     }
 
     external fun TProxyStartService(configPath: String, fd: Int)
