@@ -126,9 +126,7 @@ jobs:
 
       - name: Build APK
         working-directory: ${{ github.workspace }}/android
-        run: |
-          rm -rf app/.cxx
-          chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
         run: find ${{ github.workspace }}/android -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
