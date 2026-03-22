@@ -60,12 +60,12 @@ jobs:
           Copy-Item vendor/windivert/x64/WinDivert.dll   windows/
           Copy-Item vendor/windivert/x64/WinDivert64.sys windows/
           pyinstaller --onefile --noconsole `
-            --name "NeoTUN" `
+            --name "NeoTUN-Windows" `
             --add-data "windows/neotun.exe;." `
             --add-data "windows/WinDivert.dll;." `
             --add-data "windows/WinDivert64.sys;." `
             windows/gui.py
-          Copy-Item dist/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
+          Copy-Item dist/NeoTUN-Windows.exe ${{ github.workspace }}/NeoTUN-Windows.exe
 
       - uses: actions/upload-artifact@v4
         with:
@@ -106,12 +106,6 @@ jobs:
         working-directory: ${{ github.workspace }}/android
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Install Gradle 8.4
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
-
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -119,9 +113,22 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle') }}
           restore-keys: gradle-
 
+      - name: Generate yaml config.h
+        run: |
+          cat > android/app/src/main/jni/hev-socks5-tunnel/third-part/yaml/src/config.h << 'EOF'
+          /* Generated for Android NDK build */
+          #define HAVE_CONFIG_H 1
+          #define YAML_VERSION_MAJOR 0
+          #define YAML_VERSION_MINOR 2
+          #define YAML_VERSION_PATCH 5
+          #define YAML_VERSION_STRING "0.2.5"
+          EOF
+
       - name: Build APK
         working-directory: ${{ github.workspace }}/android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          rm -rf app/.cxx
+          chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
         run: find ${{ github.workspace }}/android -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
@@ -162,7 +169,7 @@ jobs:
           generate_release_notes: true
           body: |
             ## Установка
-            **Windows**: скачай `NeoTUN-Windows.zip`, распакуй, запусти `NeoTUN.exe` от имени администратора.
+            **Windows**: скачай `NeoTUN-Windows.exe` и запусти от имени администратора.
             **Android**: скачай и установи `NeoTUN-Android.apk`.
           files: |
             release-files/NeoTUN-Windows.exe

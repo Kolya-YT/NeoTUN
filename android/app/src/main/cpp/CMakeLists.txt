@@ -26,6 +26,7 @@ target_compile_options(lwip PRIVATE -O2 -w)
 # ── yaml ───────────────────────────────────────────────────────────────────────
 add_library(yaml STATIC ${YAML_SRCS})
 target_include_directories(yaml PUBLIC "${YAML_DIR}/include")
+target_compile_definitions(yaml PRIVATE HAVE_CONFIG_H=1)
 target_compile_options(yaml PRIVATE -O2 -w)
 
 # ── hev-task-system ────────────────────────────────────────────────────────────
