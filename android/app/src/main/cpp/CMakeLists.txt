@@ -71,7 +71,7 @@ target_compile_options(hev-task-system PRIVATE -O2 -w -fvisibility=hidden)
 file(GLOB_RECURSE HEV_SRCS "${HEV_DIR}/src/*.c")
 list(FILTER HEV_SRCS EXCLUDE REGEX ".*(freebsd|macos|windows|netbsd).*")
 
-add_library(hev-socks5-tunnel SHARED ${HEV_SRCS})
+add_library(hev-socks5-tunnel SHARED ${HEV_SRCS} "${CMAKE_SOURCE_DIR}/lwip_port.c")
 target_include_directories(hev-socks5-tunnel PRIVATE
     "${HEV_DIR}/src"
     "${HEV_DIR}/src/misc"
