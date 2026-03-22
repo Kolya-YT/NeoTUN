@@ -6,30 +6,32 @@ import ssl
 import os
 import sys
 import ctypes
+import time
 
 # ── paths ──────────────────────────────────────────────────────────────────────
-# When bundled by PyInstaller, data files land in sys._MEIPASS
 if getattr(sys, "frozen", False):
     BASE = sys._MEIPASS
 else:
     BASE = os.path.dirname(os.path.abspath(__file__))
 
 BINARY = os.path.join(BASE, "neotun.exe")
+ARGS   = "-w -t -s 2 -o -f 5"
 
-DEFAULT_ARGS = "-w -t -s 2 -o -f 5"
-TEST_TIMEOUT = 5
-
-# ── appearance ─────────────────────────────────────────────────────────────────
+# ── theme ──────────────────────────────────────────────────────────────────────
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-BG        = "#0E0E1C"
-CARD      = "#1A1A2E"
-ACCENT    = "#4F8EF7"
-GREEN     = "#27AE60"
-RED       = "#E74C3C"
-TEXT      = "#CCCCEE"
-MUTED     = "#555577"
+BG       = "#08080F"
+SURFACE  = "#0F0F1A"
+CARD     = "#13131E"
+BORDER   = "#1E1E30"
+ACCENT   = "#5B8DEF"
+GREEN    = "#2ECC71"
+GREEN_DIM= "#1A4A2E"
+RED      = "#E74C3C"
+TEXT     = "#D0D0E8"
+MUTED    = "#404060"
+MUTED2   = "#2A2A40"
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 def is_admin():
@@ -43,7 +45,7 @@ def relaunch_as_admin():
         None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     sys.exit(0)
 
-def test_host(host, timeout=TEST_TIMEOUT):
+def test_host(host, timeout=5):
     try:
         r = subprocess.run(
             ["curl", "-s", "-o", "NUL", "-w", "%{http_code}",
@@ -53,8 +55,8 @@ def test_host(host, timeout=TEST_TIMEOUT):
             creationflags=subprocess.CREATE_NO_WINDOW
         )
         code = r.stdout.strip()
-        if code.isdigit():
-            return 100 <= int(code) < 600
+        if code.isdigit() and 100 <= int(code) < 600:
+            return True
     except Exception:
         pass
     try:
@@ -68,87 +70,128 @@ def test_host(host, timeout=TEST_TIMEOUT):
     except Exception:
         return False
 
-# ── main window ────────────────────────────────────────────────────────────────
+# ── app ────────────────────────────────────────────────────────────────────────
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("NeoTUN - DPI")
-        self.geometry("420x540")
+        self.title("NeoTUN")
+        self.geometry("480x560")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.process = None
+        self._running = False
+        self._dot_count = 0
         self._build()
 
     def _build(self):
         admin = is_admin()
 
-        # ── admin warning ──
+        # ── admin bar ──
         if not admin:
-            warn = ctk.CTkFrame(self, fg_color="#3A1010", corner_radius=8)
-            warn.pack(fill="x", padx=16, pady=(12, 0))
-            ctk.CTkLabel(warn, text="⚠  Нет прав администратора",
-                         text_color="#FF6B6B", font=("Segoe UI", 11)).pack(side="left", padx=12, pady=6)
-            ctk.CTkButton(warn, text="Перезапустить", width=130, height=28,
-                          fg_color="#7A2020", hover_color="#9A3030",
-                          command=relaunch_as_admin).pack(side="right", padx=8, pady=4)
+            bar = ctk.CTkFrame(self, fg_color="#1A0A0A", corner_radius=0, height=36)
+            bar.pack(fill="x")
+            bar.pack_propagate(False)
+            ctk.CTkLabel(bar, text="⚠  Запустите от имени администратора",
+                         text_color="#CC4444", font=("Segoe UI", 11)).pack(side="left", padx=14)
+            ctk.CTkButton(bar, text="Перезапустить", width=120, height=24,
+                          fg_color="#3A1010", hover_color="#5A1818",
+                          text_color="#FF8888", font=("Segoe UI", 10),
+                          command=relaunch_as_admin).pack(side="right", padx=10, pady=6)
 
         # ── header ──
-        ctk.CTkLabel(self, text="NeoTUN", font=("Segoe UI", 26, "bold"),
-                     text_color="white").pack(pady=(20, 0))
-        ctk.CTkLabel(self, text="DPI BYPASS", font=("Segoe UI", 11),
-                     text_color=MUTED).pack()
+        header = ctk.CTkFrame(self, fg_color=SURFACE, corner_radius=0, height=64)
+        header.pack(fill="x")
+        header.pack_propagate(False)
 
-        # ── big toggle button ──
+        ctk.CTkLabel(header, text="NeoTUN",
+                     font=("Segoe UI", 20, "bold"), text_color="white").place(x=20, y=12)
+        ctk.CTkLabel(header, text="DPI BYPASS",
+                     font=("Segoe UI", 9), text_color=MUTED).place(x=22, y=38)
+
+        self.lbl_badge = ctk.CTkLabel(header, text="● ОСТАНОВЛЕН",
+                                       font=("Segoe UI", 10, "bold"),
+                                       text_color=MUTED,
+                                       fg_color=MUTED2, corner_radius=10,
+                                       padx=10, pady=3)
+        self.lbl_badge.place(relx=1.0, x=-16, y=20, anchor="ne")
+
+        # ── big button area ──
+        center = ctk.CTkFrame(self, fg_color=BG)
+        center.pack(fill="x", padx=24, pady=(28, 0))
+
         self.btn_toggle = ctk.CTkButton(
-            self, text="ЗАПУСТИТЬ", width=160, height=160,
-            corner_radius=80,
-            font=("Segoe UI", 15, "bold"),
-            fg_color=CARD, hover_color="#252540",
-            border_width=2, border_color="#3A3A5C",
-            text_color=TEXT,
+            center,
+            text="ПОДКЛЮЧИТЬ",
+            width=432, height=72,
+            corner_radius=16,
+            font=("Segoe UI", 16, "bold"),
+            fg_color=CARD,
+            hover_color="#1A1A2A",
+            border_width=1,
+            border_color=BORDER,
+            text_color=MUTED,
             command=self._toggle
         )
-        self.btn_toggle.pack(pady=20)
+        self.btn_toggle.pack()
 
-        # ── status label ──
-        self.lbl_status = ctk.CTkLabel(self, text="● Остановлен",
-                                        font=("Segoe UI", 13),
-                                        text_color=MUTED)
-        self.lbl_status.pack()
+        if not admin:
+            self.btn_toggle.configure(state="disabled", text_color=MUTED)
 
-        # ── youtube check card ──
-        card = ctk.CTkFrame(self, fg_color=CARD, corner_radius=12)
-        card.pack(fill="x", padx=16, pady=(16, 0))
+        # ── youtube card ──
+        yt_card = ctk.CTkFrame(self, fg_color=CARD, corner_radius=14)
+        yt_card.pack(fill="x", padx=24, pady=(16, 0))
 
-        row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=14, pady=10)
+        yt_inner = ctk.CTkFrame(yt_card, fg_color="transparent")
+        yt_inner.pack(fill="x", padx=16, pady=14)
 
-        ctk.CTkLabel(row, text="YouTube", font=("Segoe UI", 13, "bold"),
-                     text_color=TEXT).pack(side="left")
+        left = ctk.CTkFrame(yt_inner, fg_color="transparent")
+        left.pack(side="left", fill="y")
 
-        self.lbl_yt = ctk.CTkLabel(row, text="—", font=("Segoe UI", 12),
-                                    text_color=MUTED)
-        self.lbl_yt.pack(side="left", padx=10)
+        ctk.CTkLabel(left, text="YouTube",
+                     font=("Segoe UI", 14, "bold"), text_color=TEXT).pack(anchor="w")
+        self.lbl_yt_status = ctk.CTkLabel(left, text="Не проверено",
+                                           font=("Segoe UI", 11), text_color=MUTED)
+        self.lbl_yt_status.pack(anchor="w", pady=(2, 0))
 
-        self.btn_check = ctk.CTkButton(row, text="Проверить", width=100, height=28,
-                                        fg_color="#252540", hover_color="#303050",
+        self.btn_check = ctk.CTkButton(yt_inner, text="Проверить",
+                                        width=100, height=32,
+                                        corner_radius=8,
+                                        fg_color=MUTED2, hover_color="#303050",
                                         text_color=TEXT, font=("Segoe UI", 11),
                                         command=self._check_yt)
         self.btn_check.pack(side="right")
 
+        # ── info cards row ──
+        row = ctk.CTkFrame(self, fg_color="transparent")
+        row.pack(fill="x", padx=24, pady=(12, 0))
+
+        self._make_info_card(row, "РЕЖИМ", "TLS Split + OOB").pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self._make_info_card(row, "ПРОКСИ", "Прямое подключение").pack(side="left", fill="x", expand=True, padx=(6, 0))
+
         # ── log ──
-        self.log = ctk.CTkTextbox(self, height=120, font=("Consolas", 9),
-                                   fg_color=CARD, text_color="#8888AA",
-                                   corner_radius=10, border_width=0)
-        self.log.pack(fill="x", padx=16, pady=12)
+        log_frame = ctk.CTkFrame(self, fg_color=CARD, corner_radius=14)
+        log_frame.pack(fill="both", expand=True, padx=24, pady=(12, 20))
+
+        ctk.CTkLabel(log_frame, text="Журнал",
+                     font=("Segoe UI", 10), text_color=MUTED).pack(anchor="w", padx=14, pady=(10, 0))
+
+        self.log = ctk.CTkTextbox(log_frame, font=("Consolas", 9),
+                                   fg_color="transparent", text_color="#505070",
+                                   corner_radius=0, border_width=0)
+        self.log.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.log.configure(state="disabled")
 
-        if not admin:
-            self.btn_toggle.configure(state="disabled")
+    def _make_info_card(self, parent, label, value):
+        f = ctk.CTkFrame(parent, fg_color=CARD, corner_radius=12)
+        ctk.CTkLabel(f, text=label, font=("Segoe UI", 9),
+                     text_color=MUTED).pack(anchor="w", padx=14, pady=(12, 0))
+        ctk.CTkLabel(f, text=value, font=("Segoe UI", 12, "bold"),
+                     text_color="#7070A0").pack(anchor="w", padx=14, pady=(2, 12))
+        return f
 
     # ── toggle ──
     def _toggle(self):
-        if self.process:
+        if self._running:
             self._stop()
         else:
             self._start()
@@ -157,7 +200,7 @@ class App(ctk.CTk):
         if not os.path.exists(BINARY):
             self._log(f"[ERR] neotun.exe не найден: {BINARY}")
             return
-        cmd = [BINARY] + DEFAULT_ARGS.split()
+        cmd = [BINARY] + ARGS.split()
         try:
             self.process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -167,48 +210,58 @@ class App(ctk.CTk):
             self._log(f"[ERR] {e}")
             return
 
-        self.btn_toggle.configure(text="ОСТАНОВИТЬ", fg_color="#1A3A1A",
-                                   hover_color="#1E4A1E", border_color=GREEN,
-                                   text_color=GREEN)
-        self.lbl_status.configure(text="● Работает", text_color=GREEN)
+        self._running = True
+        self.btn_toggle.configure(
+            text="ОТКЛЮЧИТЬ",
+            fg_color=GREEN_DIM,
+            hover_color="#1E3A24",
+            border_color=GREEN,
+            text_color=GREEN
+        )
+        self.lbl_badge.configure(text="● РАБОТАЕТ", text_color=GREEN, fg_color="#0D2A18")
         self._log(f"Запущен: {' '.join(cmd)}")
         threading.Thread(target=self._read_output, daemon=True).start()
-        # Автопроверка YouTube через 3 секунды
-        self.after(3000, self._check_yt)
+        self.after(2500, self._check_yt)
 
     def _stop(self):
         if self.process:
             self.process.terminate()
             self.process = None
-        self.btn_toggle.configure(text="ЗАПУСТИТЬ", fg_color=CARD,
-                                   hover_color="#252540", border_color="#3A3A5C",
-                                   text_color=TEXT)
-        self.lbl_status.configure(text="● Остановлен", text_color=MUTED)
-        self.lbl_yt.configure(text="—", text_color=MUTED)
+        self._running = False
+        self.btn_toggle.configure(
+            text="ПОДКЛЮЧИТЬ",
+            fg_color=CARD,
+            hover_color="#1A1A2A",
+            border_color=BORDER,
+            text_color=MUTED
+        )
+        self.lbl_badge.configure(text="● ОСТАНОВЛЕН", text_color=MUTED, fg_color=MUTED2)
+        self.lbl_yt_status.configure(text="Не проверено", text_color=MUTED)
         self._log("Остановлен.")
 
     def _read_output(self):
         proc = self.process
-        if not proc: return
+        if not proc:
+            return
         for line in proc.stdout:
             self.after(0, self._log, line.rstrip())
         self.after(0, self._on_exit)
 
     def _on_exit(self):
-        if self.process:
-            self.process = None
+        if self._running:
+            self._running = False
             self.after(0, self._stop)
 
     # ── check ──
     def _check_yt(self):
         self.btn_check.configure(state="disabled", text="...")
-        self.lbl_yt.configure(text="проверяю...", text_color=MUTED)
+        self.lbl_yt_status.configure(text="Проверяю...", text_color=MUTED)
         def _run():
             ok = test_host("www.youtube.com")
             color = GREEN if ok else RED
-            text  = "✓ Работает" if ok else "✗ Заблокирован"
-            self.after(0, self.lbl_yt.configure, {"text": text, "text_color": color})
-            self.after(0, self.btn_check.configure, {"state": "normal", "text": "Проверить"})
+            text  = "✓ Доступен" if ok else "✗ Заблокирован"
+            self.after(0, lambda: self.lbl_yt_status.configure(text=text, text_color=color))
+            self.after(0, lambda: self.btn_check.configure(state="normal", text="Проверить"))
         threading.Thread(target=_run, daemon=True).start()
 
     # ── log ──

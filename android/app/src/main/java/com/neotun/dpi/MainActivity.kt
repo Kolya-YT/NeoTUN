@@ -1,5 +1,7 @@
 package com.neotun.dpi
 
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -62,28 +64,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
-        if (intent != null) {
-            startActivityForResult(intent, VPN_REQUEST_CODE)
-        } else {
-            startBypass()
-        }
+        if (intent != null) startActivityForResult(intent, VPN_REQUEST_CODE)
+        else startBypass()
     }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == VPN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            startBypass()
-        }
+        if (requestCode == VPN_REQUEST_CODE && resultCode == Activity.RESULT_OK) startBypass()
     }
 
     private fun startBypass() {
         val intent = Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+        else startService(intent)
     }
 
     private fun stopBypass() {
@@ -93,17 +87,33 @@ class MainActivity : AppCompatActivity() {
     private fun updateUi(running: Boolean) {
         if (running) {
             btnToggle.setBackgroundResource(R.drawable.bg_button_active)
-            ivShield.alpha = 1.0f
-            tvStatus.text = "● Защита активна"
-            tvStatus.setTextColor(0xFF27AE60.toInt())
+            animateAlpha(ivShield, ivShield.alpha, 1.0f)
+            tvStatus.text = "Подключено"
+            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF27AE60.toInt())
             val pulse = AnimationUtils.loadAnimation(this, R.anim.anim_pulse)
             btnToggle.startAnimation(pulse)
         } else {
             btnToggle.setBackgroundResource(R.drawable.bg_button_idle)
-            ivShield.alpha = 0.45f
-            tvStatus.text = "Нажмите для включения"
-            tvStatus.setTextColor(0xFF666688.toInt())
+            animateAlpha(ivShield, ivShield.alpha, 0.4f)
+            tvStatus.text = "Нажмите для подключения"
+            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF44445A.toInt())
             btnToggle.clearAnimation()
+        }
+    }
+
+    private fun animateAlpha(view: ImageView, from: Float, to: Float) {
+        ValueAnimator.ofFloat(from, to).apply {
+            duration = 300
+            addUpdateListener { view.alpha = it.animatedValue as Float }
+            start()
+        }
+    }
+
+    private fun animateTextColor(view: TextView, from: Int, to: Int) {
+        ValueAnimator.ofObject(ArgbEvaluator(), from, to).apply {
+            duration = 300
+            addUpdateListener { view.setTextColor(it.animatedValue as Int) }
+            start()
         }
     }
 }
