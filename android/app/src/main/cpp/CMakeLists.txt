@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(neotun C)
+project(neotun C ASM)
 
 set(CMAKE_C_STANDARD 11)
+
+# Enable preprocessing for .s files (NDK clang needs this for #include in asm)
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -x assembler-with-cpp")
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 set(HEV_DIR "${CMAKE_SOURCE_DIR}/../jni/hev-socks5-tunnel")
