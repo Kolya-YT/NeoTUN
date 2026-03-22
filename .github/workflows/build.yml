@@ -103,8 +103,7 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Write local.properties
-        working-directory: ${{ github.workspace }}/android
-        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -125,16 +124,17 @@ jobs:
           EOF
 
       - name: Build APK
-        working-directory: ${{ github.workspace }}/android
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
-        run: find ${{ github.workspace }}/android -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
+        run: find android -name "*.apk" | head -1 | xargs -I{} cp {} NeoTUN-Android.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Android
-          path: ${{ github.workspace }}/NeoTUN-Android.apk
+          path: NeoTUN-Android.apk
 
   # ----------------------------------------------------------------
   # Release: создаём GitHub Release с файлами напрямую
