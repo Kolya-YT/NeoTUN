@@ -73,94 +73,34 @@ def test_host(host, timeout=5):
             return len(t.recv(64)) > 0
     except: return False
 
-# ── canvas gradient button ─────────────────────────────────────────────────────
-class GradientButton(ctk.CTkCanvas):
-    """A wide pill button with a left→right gradient and hover effect."""
+# ── connect button ─────────────────────────────────────────────────────────────
+class GradientButton(ctk.CTkButton):
+    """Pill connect button — wraps CTkButton for stable cross-platform rendering."""
     def __init__(self, master, text, command=None, **kw):
-        super().__init__(master, highlightthickness=0, bd=0,
-                         height=64, **kw)
-        self._text    = text
-        self._command = command
-        self._hover   = False
-        self._colors  = (ACCENT, ACCENT2)   # idle gradient
-        self.bind("<Configure>",    self._draw)
-        self.bind("<Enter>",        self._on_enter)
-        self.bind("<Leave>",        self._on_leave)
-        self.bind("<ButtonPress-1>",self._on_press)
-        self._draw()
-
-    def _draw(self, *_):
-        self.delete("all")
-        w = self.winfo_width()  or 400
-        h = self.winfo_height() or 64
-        r = 14   # corner radius
-
-        c1, c2 = self._colors
-        # horizontal gradient via thin vertical strips
-        steps = 80
-        for i in range(steps):
-            t  = i / steps
-            r1 = int(int(c1[1:3],16)*(1-t) + int(c2[1:3],16)*t)
-            g1 = int(int(c1[3:5],16)*(1-t) + int(c2[3:5],16)*t)
-            b1 = int(int(c1[5:7],16)*(1-t) + int(c2[5:7],16)*t)
-            col = f"#{r1:02x}{g1:02x}{b1:02x}"
-            x0  = i*(w/steps)
-            x1  = (i+1)*(w/steps)+1
-            self.create_rectangle(x0, 0, x1, h, fill=col, outline="")
-
-        # rounded mask (overdraw corners with bg)
-        bg = self._get_bg()
-        for cx,cy in [(0,0),(w,0),(0,h),(w,h)]:
-            self.create_arc(cx-r*2,cy-r*2,cx+r*2,cy+r*2,
-                            start=0,extent=360,fill=bg,outline=bg)
-        # re-draw rounded rect outline
-        self.create_rounded_rect(0,0,w,h,r)
-
-        # text
-        self.create_text(w//2, h//2, text=self._text,
-                         fill=WHITE, font=("Segoe UI",14,"bold"))
-
-    def create_rounded_rect(self, x1,y1,x2,y2,r):
-        self.create_arc(x1,y1,x1+2*r,y1+2*r,start=90, extent=90,style="arc",outline="",width=0)
-        self.create_arc(x2-2*r,y1,x2,y1+2*r,start=0,  extent=90,style="arc",outline="",width=0)
-        self.create_arc(x1,y2-2*r,x1+2*r,y2,start=180,extent=90,style="arc",outline="",width=0)
-        self.create_arc(x2-2*r,y2-2*r,x2,y2,start=270,extent=90,style="arc",outline="",width=0)
-
-    def _get_bg(self):
-        try:    return self.master.cget("fg_color")[1]
-        except: return BG
-
-    def _on_enter(self,*_):
-        self._colors = ("#6B9FFF","#9B7EC7")
-        self._draw()
-
-    def _on_leave(self,*_):
-        if not self._active_colors_set:
-            self._colors = (ACCENT, ACCENT2)
-        self._draw()
-
-    def _on_press(self,*_):
-        if self._command: self._command()
-
-    _active_colors_set = False
+        kw.pop("bg", None)  # CTkButton doesn't accept bg
+        super().__init__(
+            master,
+            text=text,
+            command=command,
+            height=64,
+            corner_radius=14,
+            font=("Segoe UI", 14, "bold"),
+            fg_color=ACCENT,
+            hover_color="#3A6FEF",
+            text_color=WHITE,
+            **kw,
+        )
+        self._active = False
 
     def set_active(self, active: bool):
+        self._active = active
         if active:
-            self._colors = (GREEN, "#007A40")
-            self._active_colors_set = True
+            self.configure(fg_color=GREEN, hover_color="#00A855")
         else:
-            self._colors = (ACCENT, ACCENT2)
-            self._active_colors_set = False
-        self._draw()
+            self.configure(fg_color=ACCENT, hover_color="#3A6FEF")
 
     def set_text(self, t):
-        self._text = t
-        self._draw()
-
-    def configure(self, **kw):
-        if "state" in kw:
-            self._disabled = kw.pop("state") == "disabled"
-        super().configure(**kw)
+        self.configure(text=t)
 
 # ── dot indicator ──────────────────────────────────────────────────────────────
 class DotIndicator(ctk.CTkFrame):
