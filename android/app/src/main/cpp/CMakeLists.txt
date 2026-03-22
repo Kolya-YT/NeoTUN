@@ -2,34 +2,16 @@ cmake_minimum_required(VERSION 3.22.1)
 project(neotun C ASM)
 
 set(CMAKE_C_STANDARD 11)
-
-# Enable preprocessing for .S/.s files (needed for #include in asm)
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -x assembler-with-cpp")
 
 # ── paths ──────────────────────────────────────────────────────────────────────
-set(HEV_DIR "${CMAKE_SOURCE_DIR}/../jni/hev-socks5-tunnel")
+set(HEV_DIR  "${CMAKE_SOURCE_DIR}/../jni/hev-socks5-tunnel")
 set(LWIP_DIR "${HEV_DIR}/third-part/lwip")
 set(YAML_DIR "${HEV_DIR}/third-part/yaml")
 set(TASK_DIR "${HEV_DIR}/third-part/hev-task-system")
 
-# ── collect sources ────────────────────────────────────────────────────────────
-file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
-file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
-
-# hev-task-system: all .c sources + the unified hev-task-execute.S
-# (hev-task-execute.S uses #include to pull the right arch via preprocessor)
-file(GLOB_RECURSE TASK_C_SRCS
-    "${TASK_DIR}/src/kern/*.c"
-    "${TASK_DIR}/src/lib/*.c"
-    "${TASK_DIR}/src/mem/*.c")
-set(TASK_SRCS ${TASK_C_SRCS}
-    "${TASK_DIR}/src/kern/task/hev-task-execute.S")
-
-file(GLOB_RECURSE HEV_SRCS "${HEV_DIR}/src/*.c")
-# Exclude non-Android platform backends
-list(FILTER HEV_SRCS EXCLUDE REGEX ".*(freebsd|macos|windows|netbsd).*")
-
 # ── lwip ───────────────────────────────────────────────────────────────────────
+file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
 add_library(lwip STATIC ${LWIP_SRCS})
 target_include_directories(lwip PUBLIC
     "${LWIP_DIR}/src/include"
@@ -38,13 +20,20 @@ target_compile_definitions(lwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
 target_compile_options(lwip PRIVATE -O2 -w)
 
 # ── yaml ───────────────────────────────────────────────────────────────────────
+file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
 add_library(yaml STATIC ${YAML_SRCS})
 target_include_directories(yaml PUBLIC "${YAML_DIR}/include")
 target_compile_definitions(yaml PRIVATE HAVE_CONFIG_H=1)
 target_compile_options(yaml PRIVATE -O2 -w)
 
 # ── hev-task-system ────────────────────────────────────────────────────────────
-add_library(hev-task-system STATIC ${TASK_SRCS})
+file(GLOB_RECURSE TASK_C_SRCS
+    "${TASK_DIR}/src/kern/*.c"
+    "${TASK_DIR}/src/lib/*.c"
+    "${TASK_DIR}/src/mem/*.c")
+add_library(hev-task-system STATIC
+    ${TASK_C_SRCS}
+    "${TASK_DIR}/src/kern/task/hev-task-execute.S")
 target_include_directories(hev-task-system PUBLIC
     "${TASK_DIR}/include"
     "${TASK_DIR}/src"
@@ -65,6 +54,9 @@ target_compile_definitions(hev-task-system PRIVATE
 target_compile_options(hev-task-system PRIVATE -O2 -w -fvisibility=hidden)
 
 # ── hev-socks5-tunnel ──────────────────────────────────────────────────────────
+file(GLOB_RECURSE HEV_SRCS "${HEV_DIR}/src/*.c")
+list(FILTER HEV_SRCS EXCLUDE REGEX ".*(freebsd|macos|windows|netbsd).*")
+
 add_library(hev-socks5-tunnel SHARED ${HEV_SRCS})
 target_include_directories(hev-socks5-tunnel PRIVATE
     "${HEV_DIR}/src"
@@ -79,19 +71,19 @@ target_include_directories(hev-socks5-tunnel PRIVATE
     "${TASK_DIR}/src/kern/task"
     "${TASK_DIR}/src/lib"
     "${TASK_DIR}/src/mem")
+# ANDROID must be defined so hev-jni.c is compiled (it's wrapped in #ifdef ANDROID)
 target_compile_definitions(hev-socks5-tunnel PRIVATE
-    FD_SET_DEFINED SOCKLEN_T_DEFINED ENABLE_LIBRARY
-    PKGNAME=com/neotun/dpi
-    CLSNAME=TProxyService)
+    ANDROID
+    FD_SET_DEFINED
+    SOCKLEN_T_DEFINED
+    ENABLE_LIBRARY)
 target_compile_options(hev-socks5-tunnel PRIVATE -O2 -w)
-target_link_libraries(hev-socks5-tunnel
-    lwip yaml hev-task-system
-    log android)
+target_link_libraries(hev-socks5-tunnel lwip yaml hev-task-system log android)
 target_link_options(hev-socks5-tunnel PRIVATE
     -Wl,-z,max-page-size=16384
     -Wl,-z,common-page-size=16384)
 
-# ── neotun_bypass (our SOCKS5 proxy) ──────────────────────────────────────────
+# ── neotun_bypass ──────────────────────────────────────────────────────────────
 add_library(neotun_bypass SHARED
     proxy_jni.c
     bypass.c

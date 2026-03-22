@@ -95,7 +95,6 @@ int main(int argc, char *argv[]) {
     static const char *blacklist_discord[] = {
         "discord.com", "discordapp.com", "discordapp.net",
         "discord.gg", "discord.media", "discordcdn.com",
-        "gateway.discord.gg",
         NULL
     };
     int mode_youtube = 0; /* -Y флаг */
@@ -145,7 +144,9 @@ int main(int argc, char *argv[]) {
         } else if (mode_discord && !mode_youtube) {
             wd.use_blacklist = 1;
             wd.blacklist = blacklist_discord;
-            wd.blacklist_n = 7;
+            wd.blacklist_n = 6;
+            /* Discord: не используем disorder — ломает WebSocket/WSS */
+            wd.opts.disorder = 0;
         } else {
             wd.use_blacklist = 0; /* bypass всего */
         }

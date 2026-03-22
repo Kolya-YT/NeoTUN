@@ -85,9 +85,6 @@ jobs:
       - name: Init nested submodules
         run: git submodule update --init --recursive
 
-      - name: Patch hev-jni.c (null-check + standard JNI exports)
-        run: python3 scripts/patch-hev-jni.py
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
