@@ -23,6 +23,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
+#include <netinet/in6.h>
 #include <arpa/inet.h>
 #include <android/log.h>
 
@@ -204,45 +205,62 @@ typedef struct {
     int      pipe_rd;   /* read end — receives client payload bytes */
     int      fake_ttl;
     int      disorder;
+    /* IPv6 support */
+    int      is_ipv6;
+    uint8_t  cli_ip6[16];
+    uint8_t  srv_ip6[16];
 } ConnArgs;
 
 static void apply_bypass(int sfd, const uint8_t *data, size_t len, int disorder) {
-    if (len > 5 && data[0] == 0x16) {
-        int sni_off = find_sni_offset(data, len);
-        size_t split = (sni_off > 2) ? (size_t)sni_off : 5;
-
-        char sni[256] = {0};
-        if (sni_off > 2 && sni_off < (int)len) {
-            int sni_len = (data[sni_off-2]<<8)|data[sni_off-1];
-            if (sni_len > 0 && sni_off+sni_len <= (int)len) {
-                int n = sni_len < 255 ? sni_len : 255;
-                memcpy(sni, data+sni_off, n);
-            }
-        }
-
-        if (!should_bypass(sni)) {
-            send(sfd, data, len, 0);
-            return;
-        }
-
-        LOGI("bypass [%s] split@%zu disorder=%d", sni[0]?sni:"?", split, disorder);
-
-        if (disorder) {
-            uint8_t *junk = calloc(1, len - split);
-            if (junk) {
-                send(sfd, junk, len - split, MSG_MORE);
-                free(junk);
-            }
-            send(sfd, data + split, len - split, MSG_MORE);
-            usleep(1000);
-            send(sfd, data, split, 0);
-        } else {
-            send(sfd, data, split, MSG_MORE);
-            usleep(1000);
-            send(sfd, data + split, len - split, 0);
-        }
-    } else {
+    if (len <= 5 || data[0] != 0x16) {
         send(sfd, data, len, 0);
+        return;
+    }
+
+    int sni_off = find_sni_offset(data, len);
+
+    /* Читаем SNI для фильтрации — find_sni_offset возвращает смещение
+       начала строки; длина имени хранится в 2 байтах перед ней (pos+3..4
+       в extension, т.е. sni_off-2 относительно начала SNI-данных extension).
+       Но проще: просто читаем как null-terminated строку по длине из пакета. */
+    char sni[256] = {0};
+    if (sni_off > 0 && sni_off < (int)len) {
+        /* Длина SNI-имени хранится в 2 байтах непосредственно перед sni_off */
+        if (sni_off >= 2) {
+            uint16_t name_len = (uint16_t)((data[sni_off-2] << 8) | data[sni_off-1]);
+            if (name_len > 0 && (size_t)(sni_off + name_len) <= len) {
+                int n = name_len < 255 ? name_len : 255;
+                memcpy(sni, data + sni_off, n);
+            }
+        }
+    }
+
+    if (!should_bypass(sni)) {
+        send(sfd, data, len, 0);
+        return;
+    }
+
+    /* Точка разбивки — по SNI или по позиции 2 */
+    size_t split = (sni_off > 2) ? (size_t)sni_off : 2;
+    if (split >= len) split = len / 2;
+
+    LOGI("bypass [%s] split@%zu disorder=%d", sni[0] ? sni : "?", split, disorder);
+
+    if (disorder) {
+        /*
+         * Disorder: сначала отправляем второй сегмент (DPI его запомнит),
+         * потом первый — DPI не может собрать ClientHello целиком.
+         * На Android нет raw sockets, поэтому используем TCP_NODELAY +
+         * отправку в обратном порядке через два send с задержкой.
+         */
+        send(sfd, data + split, len - split, MSG_MORE);
+        usleep(1000);
+        send(sfd, data, split, 0);
+    } else {
+        /* Простой split с задержкой между частями */
+        send(sfd, data, split, MSG_MORE);
+        usleep(1000);
+        send(sfd, data + split, len - split, 0);
     }
 }
 
@@ -271,7 +289,7 @@ static void *conn_thread(void *arg) {
     if (n <= 0) goto done;
 
     /* 3. Connect to real server */
-    sfd = socket(AF_INET, SOCK_STREAM, 0);
+    sfd = socket(ca->is_ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, 0);
     if (sfd < 0) goto done;
     protect_socket(sfd);
 
@@ -280,13 +298,24 @@ static void *conn_thread(void *arg) {
     setsockopt(sfd, SOL_SOCKET, SO_SNDTIMEO, &stv, sizeof(stv));
 
     {
-        struct sockaddr_in dst = {0};
-        dst.sin_family      = AF_INET;
-        dst.sin_addr.s_addr = ca->srv_ip;
-        dst.sin_port        = ca->srv_port;
-        if (connect(sfd, (struct sockaddr*)&dst, sizeof(dst)) != 0) {
-            LOGE("connect failed: %s", strerror(errno));
-            goto done;
+        if (ca->is_ipv6) {
+            struct sockaddr_in6 dst6 = {0};
+            dst6.sin6_family = AF_INET6;
+            memcpy(&dst6.sin6_addr, ca->srv_ip6, 16);
+            dst6.sin6_port = ca->srv_port;
+            if (connect(sfd, (struct sockaddr*)&dst6, sizeof(dst6)) != 0) {
+                LOGE("connect6 failed: %s", strerror(errno));
+                goto done;
+            }
+        } else {
+            struct sockaddr_in dst = {0};
+            dst.sin_family      = AF_INET;
+            dst.sin_addr.s_addr = ca->srv_ip;
+            dst.sin_port        = ca->srv_port;
+            if (connect(sfd, (struct sockaddr*)&dst, sizeof(dst)) != 0) {
+                LOGE("connect failed: %s", strerror(errno));
+                goto done;
+            }
         }
     }
 
@@ -362,7 +391,94 @@ done:
 
 static void handle_packet(uint8_t *pkt, size_t len) {
     if (len < 40) return;
-    if ((pkt[0] >> 4) != 4) return;
+
+    uint8_t ip_ver = pkt[0] >> 4;
+
+    if (ip_ver == 6) {
+        /* IPv6: минимум 40 байт заголовок */
+        if (len < 40) return;
+        if (pkt[6] != 6) return; /* TCP only */
+
+        uint32_t sip6[4], dip6[4];
+        memcpy(sip6, pkt + 8,  16);
+        memcpy(dip6, pkt + 24, 16);
+
+        uint8_t *tcp = pkt + 40;
+        uint16_t sport, dport;
+        memcpy(&sport, tcp + 0, 2);
+        memcpy(&dport, tcp + 2, 2);
+
+        /* Для IPv6 используем только последние 4 байта адреса как ключ
+           (коллизии маловероятны для одного устройства) */
+        uint32_t sip_key, dip_key;
+        memcpy(&sip_key, (uint8_t*)sip6 + 12, 4);
+        memcpy(&dip_key, (uint8_t*)dip6 + 12, 4);
+
+        if (ntohs(dport) != 443) return;
+
+        uint32_t seq;
+        memcpy(&seq, tcp + 4, 4); seq = ntohl(seq);
+        uint8_t thl   = ((tcp[12] >> 4) & 0x0f) * 4;
+        uint8_t flags = tcp[13];
+        size_t doff = 40 + thl;
+        size_t dlen = (len > doff) ? len - doff : 0;
+        uint8_t *data = pkt + doff;
+
+        if (flags & F_RST) {
+            pthread_mutex_lock(&g_conns_mu);
+            conn_del(sip_key, sport);
+            pthread_mutex_unlock(&g_conns_mu);
+            return;
+        }
+
+        if (flags & F_SYN) {
+            int pipefd[2];
+            if (pipe(pipefd) != 0) return;
+
+            ConnArgs *ca = calloc(1, sizeof(ConnArgs));
+            ca->tun_fd   = g_tun_fd;
+            ca->cli_ip   = sip_key;
+            ca->cli_port = sport;
+            ca->srv_ip   = dip_key;
+            ca->srv_port = dport;
+            ca->cli_seq  = seq + 1;
+            ca->pipe_rd  = pipefd[0];
+            ca->fake_ttl = g_fake_ttl;
+            ca->disorder = g_disorder;
+            /* Для IPv6 соединений сохраняем полные адреса */
+            memcpy(ca->cli_ip6, sip6, 16);
+            memcpy(ca->srv_ip6, dip6, 16);
+            ca->is_ipv6  = 1;
+
+            pthread_mutex_lock(&g_conns_mu);
+            if (conn_add(sip_key, sport, pipefd[1]) != 0) {
+                pthread_mutex_unlock(&g_conns_mu);
+                close(pipefd[0]); close(pipefd[1]);
+                free(ca);
+                return;
+            }
+            pthread_mutex_unlock(&g_conns_mu);
+
+            pthread_t t;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+            pthread_create(&t, &attr, conn_thread, ca);
+            pthread_attr_destroy(&attr);
+            return;
+        }
+
+        if (dlen > 0) {
+            pthread_mutex_lock(&g_conns_mu);
+            int pw = conn_get_pipe(sip_key, sport);
+            pthread_mutex_unlock(&g_conns_mu);
+            if (pw > 0) write(pw, data, dlen);
+        }
+        return;
+    }
+
+    if (ip_ver != 4) return;
+    if (len < 40) return;
     if (pkt[9] != 6) return; /* TCP only */
 
     uint8_t ihl = (pkt[0] & 0x0f) * 4;
@@ -412,6 +528,7 @@ static void handle_packet(uint8_t *pkt, size_t len) {
         ca->pipe_rd  = pipefd[0];
         ca->fake_ttl = g_fake_ttl;
         ca->disorder = g_disorder;
+        ca->is_ipv6  = 0;
 
         pthread_mutex_lock(&g_conns_mu);
         if (conn_add(sip, sport, pipefd[1]) != 0) {

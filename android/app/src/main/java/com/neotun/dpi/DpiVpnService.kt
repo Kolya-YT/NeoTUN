@@ -49,7 +49,11 @@ class DpiVpnService : VpnService() {
         val builder = Builder()
             .setSession("NeoTUN DPI")
             .addAddress("10.0.0.1", 32)
-            .addRoute("0.0.0.0", 0)
+            .addAddress("fd00::1", 128)          // IPv6 адрес TUN
+            .addRoute("0.0.0.0", 0)              // весь IPv4 трафик
+            .addRoute("::", 0)                   // весь IPv6 трафик
+            .addDnsServer("8.8.8.8")
+            .addDnsServer("8.8.4.4")
             .setMtu(1500)
             .setBlocking(true)
 

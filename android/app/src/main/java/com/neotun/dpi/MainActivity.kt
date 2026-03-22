@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.VpnService
 import android.os.Bundle
-import android.widget.Button
+import android.view.animation.AnimationUtils
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
@@ -15,13 +17,13 @@ class MainActivity : AppCompatActivity() {
 
     private val VPN_REQUEST_CODE = 100
 
-    private lateinit var btnToggle: Button
+    private lateinit var btnToggle: FrameLayout
+    private lateinit var ivShield: ImageView
     private lateinit var tvStatus: TextView
 
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val running = intent.getBooleanExtra("running", false)
-            updateUi(running)
+            updateUi(intent.getBooleanExtra("running", false))
         }
     }
 
@@ -30,11 +32,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         btnToggle = findViewById(R.id.btnToggle)
+        ivShield  = findViewById(R.id.ivShield)
         tvStatus  = findViewById(R.id.tvStatus)
 
         btnToggle.setOnClickListener {
-            if (DpiVpnService.isRunning) stopBypass()
-            else requestVpnPermission()
+            if (DpiVpnService.isRunning) stopBypass() else requestVpnPermission()
         }
 
         updateUi(DpiVpnService.isRunning)
@@ -55,10 +57,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
-        if (intent != null)
-            startActivityForResult(intent, VPN_REQUEST_CODE)
-        else
-            startBypass()
+        if (intent != null) startActivityForResult(intent, VPN_REQUEST_CODE)
+        else startBypass()
     }
 
     @Deprecated("Deprecated in Java")
@@ -69,26 +69,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startBypass() {
-        val intent = Intent(this, DpiVpnService::class.java)
-            .setAction(DpiVpnService.ACTION_START)
-        startForegroundService(intent)
+        startForegroundService(
+            Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
+        )
     }
 
     private fun stopBypass() {
-        val intent = Intent(this, DpiVpnService::class.java)
-            .setAction(DpiVpnService.ACTION_STOP)
-        startService(intent)
+        startService(
+            Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_STOP)
+        )
     }
 
     private fun updateUi(running: Boolean) {
         if (running) {
-            tvStatus.text = "● Работает"
+            btnToggle.setBackgroundResource(R.drawable.bg_button_active)
+            ivShield.alpha = 1.0f
+            tvStatus.text = "● Защита активна"
             tvStatus.setTextColor(0xFF27AE60.toInt())
-            btnToggle.text = "Остановить"
+            val pulse = AnimationUtils.loadAnimation(this, R.anim.anim_pulse)
+            btnToggle.startAnimation(pulse)
         } else {
-            tvStatus.text = "● Остановлен"
-            tvStatus.setTextColor(0xFFAAAAAA.toInt())
-            btnToggle.text = "Запустить"
+            btnToggle.setBackgroundResource(R.drawable.bg_button_idle)
+            ivShield.alpha = 0.4f
+            tvStatus.text = "Нажмите для включения"
+            tvStatus.setTextColor(0xFF666688.toInt())
+            btnToggle.clearAnimation()
         }
     }
 }

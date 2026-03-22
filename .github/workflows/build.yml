@@ -17,14 +17,17 @@ jobs:
     defaults:
       run:
         shell: pwsh
+        working-directory: ${{ github.workspace }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MinGW via Scoop
+      - name: Install MinGW + CMake via Scoop
+        shell: pwsh
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm get.scoop.sh | iex
-          scoop install mingw cmake
+          scoop install mingw cmake --no-update-scoop
 
       - name: Download WinDivert
         run: |
@@ -43,7 +46,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force build | Out-Null
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
+          cmake --build build --config Release
 
       - name: Package
         run: |
@@ -51,12 +54,13 @@ jobs:
           Copy-Item build/neotun.exe                     dist/
           Copy-Item vendor/windivert/x64/WinDivert.dll   dist/
           Copy-Item vendor/windivert/x64/WinDivert64.sys dist/
+          Copy-Item windows/gui.py                       dist/
           Compress-Archive dist/* NeoTUN-Windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: NeoTUN-Windows.zip
+          path: ${{ github.workspace }}/NeoTUN-Windows.zip
 
       - name: Upload to release
         if: github.event_name == 'release'
@@ -69,6 +73,10 @@ jobs:
   # ----------------------------------------------------------------
   build-android:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/android
+
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +88,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install NDK
+        run: |
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1" \
+            --sdk_root=$ANDROID_SDK_ROOT
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -88,24 +106,23 @@ jobs:
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/caches
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
           key: gradle-${{ hashFiles('android/**/*.gradle') }}
-
-      - name: Write local.properties
-        working-directory: android
-        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          restore-keys: gradle-
 
       - name: Build APK
-        working-directory: android
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Find and rename APK
-        run: find android -name "*.apk" | head -1 | xargs -I{} cp {} NeoTUN-Android.apk
+      - name: Collect APK
+        run: |
+          find . -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Android
-          path: NeoTUN-Android.apk
+          path: ${{ github.workspace }}/NeoTUN-Android.apk
 
       - name: Upload to release
         if: github.event_name == 'release'
