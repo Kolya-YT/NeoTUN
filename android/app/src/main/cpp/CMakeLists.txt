@@ -3,7 +3,7 @@ project(neotun C ASM)
 
 set(CMAKE_C_STANDARD 11)
 
-# Enable preprocessing for .s files (NDK clang needs this for #include in asm)
+# Enable preprocessing for .S/.s files (needed for #include in asm)
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -x assembler-with-cpp")
 
 # ── paths ──────────────────────────────────────────────────────────────────────
@@ -12,30 +12,21 @@ set(LWIP_DIR "${HEV_DIR}/third-part/lwip")
 set(YAML_DIR "${HEV_DIR}/third-part/yaml")
 set(TASK_DIR "${HEV_DIR}/third-part/hev-task-system")
 
-# ── collect sources helper ─────────────────────────────────────────────────────
+# ── collect sources ────────────────────────────────────────────────────────────
 file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
 file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
-# hev-task-system needs ALL sources: kern + lib + mem (same as build.mk rwildcard)
-file(GLOB_RECURSE TASK_SRCS
-    "${TASK_DIR}/src/kern/*.c"
-    "${TASK_DIR}/src/kern/*.S"
-    "${TASK_DIR}/src/lib/*.c"
-    "${TASK_DIR}/src/lib/*.S"
-    "${TASK_DIR}/src/mem/*.c"
-    "${TASK_DIR}/src/mem/*.S")
 
-# arch-specific context-switch assembly
-if(ANDROID_ABI STREQUAL "arm64-v8a")
-    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/arm/hev-task-execute-aarch64.s")
-elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
-    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/arm/hev-task-execute-arm.s")
-elseif(ANDROID_ABI STREQUAL "x86_64")
-    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/x86/hev-task-execute-x86_64.s")
-elseif(ANDROID_ABI STREQUAL "x86")
-    list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/x86/hev-task-execute-x86.s")
-endif()
-file(GLOB_RECURSE HEV_SRCS  "${HEV_DIR}/src/*.c")
-# Exclude platform-specific tunnel backends not needed on Android
+# hev-task-system: all .c sources + the unified hev-task-execute.S
+# (hev-task-execute.S uses #include to pull the right arch via preprocessor)
+file(GLOB_RECURSE TASK_C_SRCS
+    "${TASK_DIR}/src/kern/*.c"
+    "${TASK_DIR}/src/lib/*.c"
+    "${TASK_DIR}/src/mem/*.c")
+set(TASK_SRCS ${TASK_C_SRCS}
+    "${TASK_DIR}/src/kern/task/hev-task-execute.S")
+
+file(GLOB_RECURSE HEV_SRCS "${HEV_DIR}/src/*.c")
+# Exclude non-Android platform backends
 list(FILTER HEV_SRCS EXCLUDE REGEX ".*(freebsd|macos|windows|netbsd).*")
 
 # ── lwip ───────────────────────────────────────────────────────────────────────
@@ -58,6 +49,7 @@ target_include_directories(hev-task-system PUBLIC
     "${TASK_DIR}/include"
     "${TASK_DIR}/src"
     "${TASK_DIR}/src/kern"
+    "${TASK_DIR}/src/kern/task"
     "${TASK_DIR}/src/lib"
     "${TASK_DIR}/src/mem")
 target_compile_definitions(hev-task-system PRIVATE
@@ -84,10 +76,13 @@ target_include_directories(hev-socks5-tunnel PRIVATE
     "${TASK_DIR}/include"
     "${TASK_DIR}/src"
     "${TASK_DIR}/src/kern"
+    "${TASK_DIR}/src/kern/task"
     "${TASK_DIR}/src/lib"
     "${TASK_DIR}/src/mem")
 target_compile_definitions(hev-socks5-tunnel PRIVATE
-    FD_SET_DEFINED SOCKLEN_T_DEFINED ENABLE_LIBRARY)
+    FD_SET_DEFINED SOCKLEN_T_DEFINED ENABLE_LIBRARY
+    PKGNAME=com/neotun/dpi
+    CLSNAME=TProxyService)
 target_compile_options(hev-socks5-tunnel PRIVATE -O2 -w)
 target_link_libraries(hev-socks5-tunnel
     lwip yaml hev-task-system
