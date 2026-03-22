@@ -3,13 +3,19 @@ project(neotun_bypass C)
 
 set(CMAKE_C_STANDARD 11)
 
+set(CORE_DIR "${CMAKE_SOURCE_DIR}/../../../../../../../../core")
+
+# Наш bypass SOCKS5 прокси
 add_library(neotun_bypass SHARED
-    bypass_jni.c
-    bypass.c
-    tun_engine.c
+    proxy_jni.c
+    ${CORE_DIR}/bypass.c
+    ${CORE_DIR}/socks5.c
+    ${CORE_DIR}/utils.c
 )
 
-target_include_directories(neotun_bypass PRIVATE .)
+target_include_directories(neotun_bypass PRIVATE . ${CORE_DIR})
+target_compile_options(neotun_bypass PRIVATE -O2 -Wall -Wno-unused-parameter)
+target_compile_definitions(neotun_bypass PRIVATE ANDROID_APP)
 
 find_library(log-lib log)
 target_link_libraries(neotun_bypass ${log-lib})

@@ -9,6 +9,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import java.io.File
 
 class DpiVpnService : VpnService() {
 
@@ -29,8 +30,9 @@ class DpiVpnService : VpnService() {
 
     private var tunInterface: ParcelFileDescriptor? = null
 
-    external fun nativeStart(tunFd: Int, fakeTtl: Int, disorder: Int): Int
-    external fun nativeStop()
+    // JNI: наш SOCKS5 bypass прокси
+    external fun nativeStartProxy(splitPos: Int, disorder: Int, tlsrecSplit: Int, oob: Int): Int
+    external fun nativeStopProxy()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -46,34 +48,47 @@ class DpiVpnService : VpnService() {
         createNotificationChannel()
         startForeground(NOTIF_ID, buildNotification("Работает"))
 
+        // 1. Запускаем наш SOCKS5 bypass прокси на 127.0.0.1:1080
+        val proxyResult = nativeStartProxy(
+            splitPos    = 2,
+            disorder    = 0,
+            tlsrecSplit = 1,
+            oob         = 1
+        )
+        if (proxyResult != 0) {
+            Log.e(TAG, "nativeStartProxy failed: $proxyResult")
+            stopSelf()
+            return
+        }
+
+        // 2. Создаём TUN интерфейс
         val builder = Builder()
             .setSession("NeoTUN DPI")
-            .addAddress("10.0.0.1", 32)
-            .addAddress("fd00::1", 128)          // IPv6 адрес TUN
-            .addRoute("0.0.0.0", 0)              // весь IPv4 трафик
-            .addRoute("::", 0)                   // весь IPv6 трафик
+            .addAddress("10.10.10.10", 32)
+            .addRoute("0.0.0.0", 0)
+            .addAddress("fd00::1", 128)
+            .addRoute("::", 0)
             .addDnsServer("8.8.8.8")
             .addDnsServer("8.8.4.4")
-            .setMtu(1500)
+            .setMtu(8500)
             .setBlocking(true)
 
-        /* Исключаем само приложение чтобы не было петли */
         try { builder.addDisallowedApplication(packageName) } catch (_: Exception) {}
 
         tunInterface = builder.establish()
         val fd = tunInterface?.fd ?: run {
             Log.e(TAG, "Failed to establish VPN interface")
+            nativeStopProxy()
             stopSelf()
             return
         }
 
-        val result = nativeStart(fd, fakeTtl = 5, disorder = 1)
-        if (result != 0) {
-            Log.e(TAG, "nativeStart failed: $result")
-            tunInterface?.close()
-            stopSelf()
-            return
-        }
+        // 3. Запускаем hev-socks5-tunnel: TUN fd → SOCKS5 127.0.0.1:1080
+        val config = buildTun2SocksConfig()
+        val configFile = File.createTempFile("neotun_cfg", ".yml", cacheDir)
+        configFile.writeText(config)
+
+        TProxyService.TProxyStartService(configFile.absolutePath, fd)
 
         isRunning = true
         Log.i(TAG, "DPI bypass started, tun_fd=$fd")
@@ -81,7 +96,8 @@ class DpiVpnService : VpnService() {
     }
 
     private fun stopBypass() {
-        nativeStop()
+        TProxyService.TProxyStopService()
+        nativeStopProxy()
         tunInterface?.close()
         tunInterface = null
         isRunning = false
@@ -96,6 +112,19 @@ class DpiVpnService : VpnService() {
         super.onDestroy()
     }
 
+    private fun buildTun2SocksConfig(): String = """
+tunnel:
+  mtu: 8500
+
+misc:
+  task-stack-size: 81920
+
+socks5:
+  address: 127.0.0.1
+  port: 1080
+  udp: udp
+""".trimIndent()
+
     private fun buildNotification(status: String): Notification {
         val pi = PendingIntent.getActivity(
             this, 0,
@@ -103,7 +132,7 @@ class DpiVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("NeoTUN - DPI")
+            .setContentTitle("NeoTUN")
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentIntent(pi)
