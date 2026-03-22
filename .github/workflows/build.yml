@@ -17,12 +17,10 @@ jobs:
       run:
         shell: pwsh
         working-directory: ${{ github.workspace }}
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Install MinGW + CMake via Scoop
-        shell: pwsh
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm get.scoop.sh | iex
@@ -61,13 +59,6 @@ jobs:
           name: NeoTUN-Windows
           path: ${{ github.workspace }}/NeoTUN-Windows.zip
 
-      - name: Upload to release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: NeoTUN-Windows.zip
-          generate_release_notes: true
-
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
   # ----------------------------------------------------------------
@@ -76,7 +67,6 @@ jobs:
     defaults:
       run:
         working-directory: ${{ github.workspace }}/android
-
     steps:
       - uses: actions/checkout@v4
 
@@ -116,17 +106,42 @@ jobs:
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
-        run: |
-          find . -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
+        run: find . -name "*.apk" | head -1 | xargs -I{} cp {} ${{ github.workspace }}/NeoTUN-Android.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Android
           path: ${{ github.workspace }}/NeoTUN-Android.apk
 
-      - name: Upload to release
-        if: startsWith(github.ref, 'refs/tags/')
+  # ----------------------------------------------------------------
+  # Release: создаём GitHub Release с файлами напрямую
+  # Запускается только при пуше тега v*
+  # ----------------------------------------------------------------
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ build-windows, build-android ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NeoTUN-Windows
+          path: release-files
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NeoTUN-Android
+          path: release-files
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: NeoTUN-Android.apk
+          tag_name: ${{ github.ref_name }}
+          name: NeoTUN ${{ github.ref_name }}
           generate_release_notes: true
+          files: |
+            release-files/NeoTUN-Windows.zip
+            release-files/NeoTUN-Android.apk
