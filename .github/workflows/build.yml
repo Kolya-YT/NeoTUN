@@ -56,22 +56,27 @@ jobs:
       - name: Build GUI exe (PyInstaller)
         run: |
           pip install customtkinter pyinstaller --quiet
-          # Copy neotun.exe + WinDivert files next to gui.py so PyInstaller bundles them
           Copy-Item build/neotun.exe                     windows/
           Copy-Item vendor/windivert/x64/WinDivert.dll   windows/
           Copy-Item vendor/windivert/x64/WinDivert64.sys windows/
-          pyinstaller --onefile --noconsole `
+          pyinstaller --onedir --noconsole `
             --name "NeoTUN" `
             --add-data "windows/neotun.exe;." `
             --add-data "windows/WinDivert.dll;." `
             --add-data "windows/WinDivert64.sys;." `
             windows/gui.py
-          Copy-Item dist/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
+          # Pack onedir output into a single exe using 7zip self-extractor alternative:
+          # just zip the dist/NeoTUN folder and upload as-is, user runs NeoTUN.exe inside
+          Compress-Archive dist/NeoTUN/* ${{ github.workspace }}/NeoTUN-Windows.zip
+          # Also copy the main exe for direct download
+          Copy-Item dist/NeoTUN/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: ${{ github.workspace }}/NeoTUN-Windows.exe
+          path: |
+            ${{ github.workspace }}/NeoTUN-Windows.exe
+            ${{ github.workspace }}/NeoTUN-Windows.zip
 
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
@@ -101,6 +106,8 @@ jobs:
             "ndk;27.0.12077973" \
             "cmake;3.22.1" \
             --sdk_root=$ANDROID_SDK_ROOT
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Write local.properties
         working-directory: ${{ github.workspace }}/android
@@ -160,6 +167,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: NeoTUN ${{ github.ref_name }}
           generate_release_notes: true
+          body: |
+            ## Установка
+            **Windows**: скачай `NeoTUN-Windows.zip`, распакуй, запусти `NeoTUN.exe` от имени администратора.
+            **Android**: скачай и установи `NeoTUN-Android.apk`.
           files: |
-            release-files/NeoTUN-Windows.exe
+            release-files/NeoTUN-Windows.zip
             release-files/NeoTUN-Android.apk
