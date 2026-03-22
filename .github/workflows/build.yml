@@ -34,10 +34,10 @@ jobs:
           $src = (Get-ChildItem WinDivert_sdk -Directory | Select-Object -First 1).FullName
           New-Item -ItemType Directory -Force vendor/windivert/include | Out-Null
           New-Item -ItemType Directory -Force vendor/windivert/x64     | Out-Null
-          Copy-Item "$src/include/windivert.h"  vendor/windivert/include/
-          Copy-Item "$src/x64/WinDivert.dll"    vendor/windivert/x64/
-          Copy-Item "$src/x64/WinDivert.lib"    vendor/windivert/x64/
-          Copy-Item "$src/x64/WinDivert64.sys"  vendor/windivert/x64/
+          Copy-Item "$src/include/windivert.h"   vendor/windivert/include/
+          Copy-Item "$src/x64/WinDivert.dll"     vendor/windivert/x64/
+          Copy-Item "$src/x64/WinDivert.lib"     vendor/windivert/x64/
+          Copy-Item "$src/x64/WinDivert64.sys"   vendor/windivert/x64/
 
       - name: Build
         run: |
@@ -48,10 +48,9 @@ jobs:
       - name: Package
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item build/neotun.exe                    dist/
-          Copy-Item vendor/windivert/x64/WinDivert.dll  dist/
+          Copy-Item build/neotun.exe                     dist/
+          Copy-Item vendor/windivert/x64/WinDivert.dll   dist/
           Copy-Item vendor/windivert/x64/WinDivert64.sys dist/
-          Copy-Item windows/gui.py                      dist/
           Compress-Archive dist/* NeoTUN-Windows.zip
 
       - uses: actions/upload-artifact@v4

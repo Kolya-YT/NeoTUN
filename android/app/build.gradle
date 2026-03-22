@@ -16,8 +16,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                cppFlags "-std=c++17"
-                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_STL=none"
             }
         }
         ndk {
@@ -37,10 +36,6 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
         }
-    }
-
-    buildFeatures {
-        viewBinding true
     }
 
     compileOptions {

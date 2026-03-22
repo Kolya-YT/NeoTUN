@@ -49,11 +49,9 @@ class DpiVpnService : VpnService() {
         val builder = Builder()
             .setSession("NeoTUN DPI")
             .addAddress("10.0.0.1", 32)
-            .addRoute("0.0.0.0", 0)          /* весь трафик через TUN */
-            .addDnsServer("1.1.1.1")
-            .addDnsServer("8.8.8.8")
+            .addRoute("0.0.0.0", 0)
             .setMtu(1500)
-            .setBlocking(false)
+            .setBlocking(true)
 
         /* Исключаем само приложение чтобы не было петли */
         try { builder.addDisallowedApplication(packageName) } catch (_: Exception) {}
@@ -75,8 +73,6 @@ class DpiVpnService : VpnService() {
 
         isRunning = true
         Log.i(TAG, "DPI bypass started, tun_fd=$fd")
-
-        /* Уведомляем MainActivity */
         sendBroadcast(Intent("com.neotun.dpi.STATUS").putExtra("running", true))
     }
 

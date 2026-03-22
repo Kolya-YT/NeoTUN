@@ -1,259 +1,477 @@
+/*
+ * NeoTUN Android — TUN engine (minimal TCP proxy)
+ *
+ * Читает IP пакеты из TUN fd.
+ * Для каждого TCP:443 SYN — создаёт поток-прокси:
+ *   1. Отвечает SYN-ACK клиенту через TUN
+ *   2. Ждёт данных от клиента (ACK+PSH с TLS ClientHello)
+ *   3. Подключается к реальному серверу через protect()
+ *   4. Применяет FAKEDDISORDER split на ClientHello
+ *   5. Двунаправленный relay: TUN ↔ real socket
+ *
+ * Для передачи данных между tun_reader и conn_thread используем socketpair.
+ */
+
 #include "tun_engine.h"
 #include "bypass.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
 #include <android/log.h>
 
-#define TAG "NeoTUN"
+#define TAG  "NeoTUN"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
-#define PKT_BUF 65535
-#define BADSEQ_INC ((uint32_t)(-10000))
-
-static volatile int g_running = 0;
-static int          g_tun_fd  = -1;
-static int          g_fake_ttl = 5;
-static int          g_disorder = 1;
-static pthread_t    g_thread;
+#define BUF_SIZE 65536
 
 /* ------------------------------------------------------------------ */
-/* Вспомогательные функции работы с пакетами                          */
+/* Globals                                                              */
 /* ------------------------------------------------------------------ */
 
-static uint16_t ip_checksum(const void *buf, size_t len) {
-    const uint16_t *p = (const uint16_t *)buf;
-    uint32_t sum = 0;
-    while (len > 1) { sum += *p++; len -= 2; }
-    if (len) sum += *(const uint8_t *)p;
-    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
-    return (uint16_t)~sum;
+static volatile int  g_running  = 0;
+static int           g_tun_fd   = -1;
+static int           g_fake_ttl = 5;
+static int           g_disorder = 1;
+static pthread_t     g_tun_thread;
+
+static JavaVM  *g_jvm     = NULL;
+static jobject  g_service = NULL;
+
+/* ------------------------------------------------------------------ */
+/* protect() via JNI                                                    */
+/* ------------------------------------------------------------------ */
+
+static int protect_socket(int fd) {
+    if (!g_jvm || !g_service) return 0;
+    JNIEnv *env = NULL;
+    int attached = 0;
+    if ((*g_jvm)->GetEnv(g_jvm, (void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        (*g_jvm)->AttachCurrentThread(g_jvm, &env, NULL);
+        attached = 1;
+    }
+    jclass cls = (*env)->GetObjectClass(env, g_service);
+    jmethodID mid = (*env)->GetMethodID(env, cls, "protect", "(I)Z");
+    jboolean ok = (*env)->CallBooleanMethod(env, g_service, mid, (jint)fd);
+    (*env)->DeleteLocalRef(env, cls);
+    if (attached) (*g_jvm)->DetachCurrentThread(g_jvm);
+    return ok ? 0 : -1;
 }
 
-static uint16_t tcp_checksum(const struct iphdr *ip, const struct tcphdr *tcp,
-                              const uint8_t *payload, size_t payload_len) {
-    size_t tcp_len = (tcp->doff * 4) + payload_len;
-    uint8_t *pseudo = malloc(12 + tcp_len);
-    if (!pseudo) return 0;
+/* ------------------------------------------------------------------ */
+/* IP/TCP helpers                                                       */
+/* ------------------------------------------------------------------ */
 
-    /* Pseudo header */
-    memcpy(pseudo,     &ip->saddr, 4);
-    memcpy(pseudo + 4, &ip->daddr, 4);
-    pseudo[8] = 0;
-    pseudo[9] = IPPROTO_TCP;
-    pseudo[10] = (uint8_t)(tcp_len >> 8);
-    pseudo[11] = (uint8_t)(tcp_len & 0xFF);
-    memcpy(pseudo + 12, tcp, tcp->doff * 4);
-    if (payload_len)
-        memcpy(pseudo + 12 + tcp->doff * 4, payload, payload_len);
-
-    /* Обнуляем checksum в копии TCP заголовка */
-    ((struct tcphdr *)(pseudo + 12))->check = 0;
-
-    uint16_t csum = ip_checksum(pseudo, 12 + tcp_len);
-    free(pseudo);
-    return csum;
+static uint16_t checksum16(const void *buf, size_t len) {
+    const uint16_t *p = buf;
+    uint32_t s = 0;
+    while (len > 1) { s += *p++; len -= 2; }
+    if (len) s += *(const uint8_t*)p;
+    while (s >> 16) s = (s & 0xffff) + (s >> 16);
+    return (uint16_t)~s;
 }
 
-/*
- * Записать пакет в TUN.
- * Строим IP+TCP+payload из компонентов.
- */
-static void write_segment(int fd,
-                           const struct iphdr  *ip,
-                           const struct tcphdr *tcp,
-                           const uint8_t       *payload,
-                           size_t               payload_len,
-                           uint32_t             seq_override,
-                           uint8_t              ttl_override)
-{
-    size_t ip_hlen  = ip->ihl * 4;
-    size_t tcp_hlen = tcp->doff * 4;
-    size_t total    = ip_hlen + tcp_hlen + payload_len;
+static uint16_t tcp_csum(uint32_t sip, uint32_t dip,
+                          const uint8_t *tcp, size_t tcp_len) {
+    uint8_t ph[12];
+    memcpy(ph,   &sip, 4);
+    memcpy(ph+4, &dip, 4);
+    ph[8] = 0; ph[9] = 6;
+    uint16_t tl = htons((uint16_t)tcp_len);
+    memcpy(ph+10, &tl, 2);
+    uint32_t s = 0;
+    const uint16_t *p = (const uint16_t*)ph;
+    for (int i = 0; i < 6; i++) s += p[i];
+    p = (const uint16_t*)tcp;
+    size_t rem = tcp_len;
+    while (rem > 1) { s += *p++; rem -= 2; }
+    if (rem) s += *(const uint8_t*)p;
+    while (s >> 16) s = (s & 0xffff) + (s >> 16);
+    return (uint16_t)~s;
+}
 
-    uint8_t *pkt = malloc(total);
+/* Build IP+TCP packet and write to TUN */
+static void tun_send(int tun_fd,
+                     uint32_t sip, uint16_t sport,
+                     uint32_t dip, uint16_t dport,
+                     uint32_t seq, uint32_t ack,
+                     uint8_t flags,
+                     const uint8_t *data, size_t dlen) {
+    size_t total = 40 + dlen;
+    uint8_t *pkt = calloc(1, total);
     if (!pkt) return;
 
-    memcpy(pkt, ip,  ip_hlen);
-    memcpy(pkt + ip_hlen, tcp, tcp_hlen);
-    if (payload_len)
-        memcpy(pkt + ip_hlen + tcp_hlen, payload, payload_len);
+    /* IPv4 */
+    pkt[0] = 0x45;
+    uint16_t tot = htons((uint16_t)total);
+    memcpy(pkt+2, &tot, 2);
+    pkt[8] = 64;
+    pkt[9] = 6; /* TCP */
+    memcpy(pkt+12, &sip, 4);
+    memcpy(pkt+16, &dip, 4);
+    uint16_t ic = checksum16(pkt, 20);
+    memcpy(pkt+10, &ic, 2);
 
-    struct iphdr  *nip  = (struct iphdr  *)pkt;
-    struct tcphdr *ntcp = (struct tcphdr *)(pkt + ip_hlen);
+    /* TCP */
+    uint8_t *tcp = pkt + 20;
+    memcpy(tcp+0, &sport, 2);
+    memcpy(tcp+2, &dport, 2);
+    uint32_t sn = htonl(seq), an = htonl(ack);
+    memcpy(tcp+4, &sn, 4);
+    memcpy(tcp+8, &an, 4);
+    tcp[12] = 0x50; /* data offset = 5 */
+    tcp[13] = flags;
+    uint16_t win = htons(65535);
+    memcpy(tcp+14, &win, 2);
+    if (dlen) memcpy(tcp+20, data, dlen);
+    uint16_t tc = tcp_csum(sip, dip, tcp, 20 + dlen);
+    memcpy(tcp+16, &tc, 2);
 
-    nip->tot_len = htons((uint16_t)total);
-    nip->check   = 0;
-    if (ttl_override) nip->ttl = ttl_override;
-    if (seq_override) ntcp->seq = htonl(seq_override);
-    ntcp->psh = 0;
-    ntcp->check = 0;
-
-    nip->check  = ip_checksum(pkt, ip_hlen);
-    ntcp->check = tcp_checksum(nip, ntcp, payload, payload_len);
-
-    write(fd, pkt, total);
+    write(tun_fd, pkt, total);
     free(pkt);
 }
 
-static void send_fake(int fd,
-                      const struct iphdr  *ip,
-                      const struct tcphdr *tcp,
-                      size_t               payload_len,
-                      uint32_t             base_seq,
-                      uint8_t              fake_ttl)
-{
-    uint8_t *junk = malloc(payload_len);
-    if (!junk) return;
-    junk[0] = 0x00;
-    for (size_t i = 1; i < payload_len; i++) junk[i] = (uint8_t)(i & 0xFF);
+#define F_FIN 0x01
+#define F_SYN 0x02
+#define F_RST 0x04
+#define F_PSH 0x08
+#define F_ACK 0x10
 
-    write_segment(fd, ip, tcp, junk, payload_len,
-                  base_seq + BADSEQ_INC, fake_ttl);
-    free(junk);
+/* ------------------------------------------------------------------ */
+/* Connection table — maps (src_ip, src_port) → pipe write end         */
+/* ------------------------------------------------------------------ */
+
+#define CONN_MAX 256
+
+typedef struct {
+    uint32_t cli_ip;
+    uint16_t cli_port;
+    int      pipe_wr; /* write end — tun_reader pushes client data here */
+} ConnSlot;
+
+static ConnSlot     g_conns[CONN_MAX];
+static pthread_mutex_t g_conns_mu = PTHREAD_MUTEX_INITIALIZER;
+
+static int conn_add(uint32_t cli_ip, uint16_t cli_port, int pipe_wr) {
+    for (int i = 0; i < CONN_MAX; i++) {
+        if (!g_conns[i].pipe_wr) {
+            g_conns[i].cli_ip   = cli_ip;
+            g_conns[i].cli_port = cli_port;
+            g_conns[i].pipe_wr  = pipe_wr;
+            return 0;
+        }
+    }
+    return -1;
 }
 
-/*
- * Десинхронизация: FAKEDDISORDER или FAKEDSPLIT.
- * Та же логика что и в windivert_engine.c.
- */
-static void desync_send(int fd,
-                         const struct iphdr  *ip,
-                         const struct tcphdr *tcp,
-                         const uint8_t       *payload,
-                         size_t               payload_len,
-                         size_t               split_at,
-                         int                  disorder,
-                         int                  fake_ttl)
-{
-    if (split_at == 0 || split_at >= payload_len) return;
+static int conn_get_pipe(uint32_t cli_ip, uint16_t cli_port) {
+    for (int i = 0; i < CONN_MAX; i++) {
+        if (g_conns[i].cli_ip == cli_ip && g_conns[i].cli_port == cli_port)
+            return g_conns[i].pipe_wr;
+    }
+    return -1;
+}
 
-    uint32_t base_seq = ntohl(tcp->seq);
-    uint32_t seq2     = base_seq + (uint32_t)split_at;
-
-    if (disorder) {
-        if (fake_ttl > 0)
-            send_fake(fd, ip, tcp, payload_len - split_at, seq2, (uint8_t)fake_ttl);
-        write_segment(fd, ip, tcp, payload + split_at, payload_len - split_at, seq2, 0);
-        usleep(1000);
-        if (fake_ttl > 0) {
-            send_fake(fd, ip, tcp, payload_len - split_at, seq2, (uint8_t)fake_ttl);
-            send_fake(fd, ip, tcp, split_at, base_seq, (uint8_t)fake_ttl);
+static void conn_del(uint32_t cli_ip, uint16_t cli_port) {
+    for (int i = 0; i < CONN_MAX; i++) {
+        if (g_conns[i].cli_ip == cli_ip && g_conns[i].cli_port == cli_port) {
+            g_conns[i].pipe_wr  = 0;
+            g_conns[i].cli_ip   = 0;
+            g_conns[i].cli_port = 0;
+            return;
         }
-        write_segment(fd, ip, tcp, payload, split_at, base_seq, 0);
-        if (fake_ttl > 0)
-            send_fake(fd, ip, tcp, split_at, base_seq, (uint8_t)fake_ttl);
-    } else {
-        if (fake_ttl > 0)
-            send_fake(fd, ip, tcp, split_at, base_seq, (uint8_t)fake_ttl);
-        write_segment(fd, ip, tcp, payload, split_at, base_seq, 0);
-        usleep(1000);
-        if (fake_ttl > 0) {
-            send_fake(fd, ip, tcp, split_at, base_seq, (uint8_t)fake_ttl);
-            send_fake(fd, ip, tcp, payload_len - split_at, seq2, (uint8_t)fake_ttl);
-        }
-        write_segment(fd, ip, tcp, payload + split_at, payload_len - split_at, seq2, 0);
-        if (fake_ttl > 0)
-            send_fake(fd, ip, tcp, payload_len - split_at, seq2, (uint8_t)fake_ttl);
     }
 }
 
 /* ------------------------------------------------------------------ */
-/* Основной поток обработки пакетов                                    */
+/* Per-connection thread                                                */
 /* ------------------------------------------------------------------ */
 
-static void *engine_thread(void *arg) {
-    (void)arg;
-    uint8_t buf[PKT_BUF];
+typedef struct {
+    int      tun_fd;
+    uint32_t cli_ip;
+    uint16_t cli_port;
+    uint32_t srv_ip;
+    uint16_t srv_port;
+    uint32_t cli_seq;   /* expected next seq from client */
+    int      pipe_rd;   /* read end — receives client payload bytes */
+    int      fake_ttl;
+    int      disorder;
+} ConnArgs;
 
-    while (g_running) {
-        ssize_t n = read(g_tun_fd, buf, sizeof(buf));
-        if (n <= 0) {
-            if (!g_running) break;
-            continue;
-        }
+static void apply_bypass(int sfd, const uint8_t *data, size_t len, int disorder) {
+    if (len > 5 && data[0] == 0x16) {
+        int sni_off = find_sni_offset(data, len);
+        size_t split = (sni_off > 2) ? (size_t)sni_off : 5;
 
-        if ((size_t)n < sizeof(struct iphdr)) {
-            write(g_tun_fd, buf, n);
-            continue;
-        }
-
-        struct iphdr *ip = (struct iphdr *)buf;
-
-        /* Только IPv4 TCP */
-        if (ip->version != 4 || ip->protocol != IPPROTO_TCP) {
-            write(g_tun_fd, buf, n);
-            continue;
-        }
-
-        size_t ip_hlen = ip->ihl * 4;
-        if ((size_t)n < ip_hlen + sizeof(struct tcphdr)) {
-            write(g_tun_fd, buf, n);
-            continue;
-        }
-
-        struct tcphdr *tcp = (struct tcphdr *)(buf + ip_hlen);
-        size_t tcp_hlen    = tcp->doff * 4;
-        size_t total_hdr   = ip_hlen + tcp_hlen;
-
-        if ((size_t)n <= total_hdr) {
-            write(g_tun_fd, buf, n);
-            continue;
-        }
-
-        uint8_t *payload     = buf + total_hdr;
-        size_t   payload_len = (size_t)n - total_hdr;
-
-        /* Только TLS ClientHello на порт 443 */
-        if (ntohs(tcp->dest) != 443 || payload_len < 5 || payload[0] != 0x16) {
-            write(g_tun_fd, buf, n);
-            continue;
-        }
-
-        /* Извлекаем SNI */
-        int sni_off = find_sni_offset(payload, payload_len);
         char sni[256] = {0};
-        if (sni_off > 0 && sni_off < (int)payload_len) {
-            int sni_len = (payload[sni_off-2] << 8) | payload[sni_off-1];
-            if (sni_len > 0 && sni_off + sni_len <= (int)payload_len) {
-                if (sni_len >= (int)sizeof(sni)) sni_len = sizeof(sni) - 1;
-                memcpy(sni, payload + sni_off, sni_len);
+        if (sni_off > 2 && sni_off < (int)len) {
+            int sni_len = (data[sni_off-2]<<8)|data[sni_off-1];
+            if (sni_len > 0 && sni_off+sni_len <= (int)len) {
+                int n = sni_len < 255 ? sni_len : 255;
+                memcpy(sni, data+sni_off, n);
             }
         }
 
         if (!should_bypass(sni)) {
-            write(g_tun_fd, buf, n);
-            continue;
+            send(sfd, data, len, 0);
+            return;
         }
 
-        int split_at = sni_off > 0 ? sni_off : 5;
-        if (split_at <= 0 || split_at >= (int)payload_len) {
-            write(g_tun_fd, buf, n);
-            continue;
+        LOGI("bypass [%s] split@%zu disorder=%d", sni[0]?sni:"?", split, disorder);
+
+        if (disorder) {
+            uint8_t *junk = calloc(1, len - split);
+            if (junk) {
+                send(sfd, junk, len - split, MSG_MORE);
+                free(junk);
+            }
+            send(sfd, data + split, len - split, MSG_MORE);
+            usleep(1000);
+            send(sfd, data, split, 0);
+        } else {
+            send(sfd, data, split, MSG_MORE);
+            usleep(1000);
+            send(sfd, data + split, len - split, 0);
         }
+    } else {
+        send(sfd, data, len, 0);
+    }
+}
 
-        LOGI("bypass [%s] port=443 split@%d disorder=%d fake_ttl=%d",
-             sni[0] ? sni : "?", split_at, g_disorder, g_fake_ttl);
+static void *conn_thread(void *arg) {
+    ConnArgs *ca = (ConnArgs*)arg;
+    uint8_t buf[BUF_SIZE];
+    int sfd = -1;
 
-        desync_send(g_tun_fd, ip, tcp, payload, payload_len,
-                    (size_t)split_at, g_disorder, g_fake_ttl);
-        /* Оригинал не пишем — уже отправили части */
+    /* 1. Send SYN-ACK to client */
+    uint32_t srv_isn = 0xDEAD0000 ^ (uint32_t)(uintptr_t)ca;
+    uint32_t srv_seq = srv_isn;
+    tun_send(ca->tun_fd,
+             ca->srv_ip, ca->srv_port,
+             ca->cli_ip, ca->cli_port,
+             srv_seq, ca->cli_seq,
+             F_SYN | F_ACK, NULL, 0);
+    srv_seq++;
+
+    /* 2. Wait for first data from client via pipe (ACK + PSH) */
+    struct timeval tv = {10, 0};
+    fd_set fds;
+    FD_ZERO(&fds); FD_SET(ca->pipe_rd, &fds);
+    if (select(ca->pipe_rd+1, &fds, NULL, NULL, &tv) <= 0) goto done;
+
+    ssize_t n = read(ca->pipe_rd, buf, sizeof(buf));
+    if (n <= 0) goto done;
+
+    /* 3. Connect to real server */
+    sfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sfd < 0) goto done;
+    protect_socket(sfd);
+
+    struct timeval stv = {15, 0};
+    setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, &stv, sizeof(stv));
+    setsockopt(sfd, SOL_SOCKET, SO_SNDTIMEO, &stv, sizeof(stv));
+
+    {
+        struct sockaddr_in dst = {0};
+        dst.sin_family      = AF_INET;
+        dst.sin_addr.s_addr = ca->srv_ip;
+        dst.sin_port        = ca->srv_port;
+        if (connect(sfd, (struct sockaddr*)&dst, sizeof(dst)) != 0) {
+            LOGE("connect failed: %s", strerror(errno));
+            goto done;
+        }
     }
 
+    /* 4. Apply bypass on first packet */
+    apply_bypass(sfd, buf, (size_t)n, ca->disorder);
+    ca->cli_seq += (uint32_t)n;
+
+    /* ACK the client data */
+    tun_send(ca->tun_fd,
+             ca->srv_ip, ca->srv_port,
+             ca->cli_ip, ca->cli_port,
+             srv_seq, ca->cli_seq,
+             F_ACK, NULL, 0);
+
+    /* 5. Bidirectional relay */
+    int maxfd = ca->pipe_rd > sfd ? ca->pipe_rd : sfd;
+    while (g_running) {
+        FD_ZERO(&fds);
+        FD_SET(ca->pipe_rd, &fds);
+        FD_SET(sfd, &fds);
+        stv.tv_sec = 60; stv.tv_usec = 0;
+
+        if (select(maxfd+1, &fds, NULL, NULL, &stv) <= 0) break;
+
+        /* Client → server */
+        if (FD_ISSET(ca->pipe_rd, &fds)) {
+            n = read(ca->pipe_rd, buf, sizeof(buf));
+            if (n <= 0) break;
+            if (send(sfd, buf, (size_t)n, 0) <= 0) break;
+            ca->cli_seq += (uint32_t)n;
+            tun_send(ca->tun_fd,
+                     ca->srv_ip, ca->srv_port,
+                     ca->cli_ip, ca->cli_port,
+                     srv_seq, ca->cli_seq,
+                     F_ACK, NULL, 0);
+        }
+
+        /* Server → client */
+        if (FD_ISSET(sfd, &fds)) {
+            n = recv(sfd, buf, sizeof(buf), 0);
+            if (n <= 0) break;
+            tun_send(ca->tun_fd,
+                     ca->srv_ip, ca->srv_port,
+                     ca->cli_ip, ca->cli_port,
+                     srv_seq, ca->cli_seq,
+                     F_PSH | F_ACK,
+                     buf, (size_t)n);
+            srv_seq += (uint32_t)n;
+        }
+    }
+
+    /* FIN */
+    tun_send(ca->tun_fd,
+             ca->srv_ip, ca->srv_port,
+             ca->cli_ip, ca->cli_port,
+             srv_seq, ca->cli_seq,
+             F_FIN | F_ACK, NULL, 0);
+
+done:
+    pthread_mutex_lock(&g_conns_mu);
+    conn_del(ca->cli_ip, ca->cli_port);
+    pthread_mutex_unlock(&g_conns_mu);
+
+    if (sfd >= 0) close(sfd);
+    close(ca->pipe_rd);
+    free(ca);
     return NULL;
 }
 
 /* ------------------------------------------------------------------ */
-/* Публичный API                                                        */
+/* TUN reader thread                                                    */
 /* ------------------------------------------------------------------ */
+
+static void handle_packet(uint8_t *pkt, size_t len) {
+    if (len < 40) return;
+    if ((pkt[0] >> 4) != 4) return;
+    if (pkt[9] != 6) return; /* TCP only */
+
+    uint8_t ihl = (pkt[0] & 0x0f) * 4;
+    if (len < (size_t)(ihl + 20)) return;
+
+    uint32_t sip, dip;
+    memcpy(&sip, pkt+12, 4);
+    memcpy(&dip, pkt+16, 4);
+
+    uint8_t *tcp = pkt + ihl;
+    uint16_t sport, dport;
+    memcpy(&sport, tcp+0, 2);
+    memcpy(&dport, tcp+2, 2);
+
+    uint32_t seq;
+    memcpy(&seq, tcp+4, 4); seq = ntohl(seq);
+
+    uint8_t thl   = ((tcp[12] >> 4) & 0x0f) * 4;
+    uint8_t flags = tcp[13];
+
+    size_t doff = ihl + thl;
+    size_t dlen = (len > doff) ? len - doff : 0;
+    uint8_t *data = pkt + doff;
+
+    /* Only intercept port 443 */
+    if (ntohs(dport) != 443) return;
+
+    if (flags & F_RST) {
+        pthread_mutex_lock(&g_conns_mu);
+        conn_del(sip, sport);
+        pthread_mutex_unlock(&g_conns_mu);
+        return;
+    }
+
+    if (flags & F_SYN) {
+        /* New connection */
+        int pipefd[2];
+        if (pipe(pipefd) != 0) return;
+
+        ConnArgs *ca = calloc(1, sizeof(ConnArgs));
+        ca->tun_fd   = g_tun_fd;
+        ca->cli_ip   = sip;
+        ca->cli_port = sport;
+        ca->srv_ip   = dip;
+        ca->srv_port = dport;
+        ca->cli_seq  = seq + 1;
+        ca->pipe_rd  = pipefd[0];
+        ca->fake_ttl = g_fake_ttl;
+        ca->disorder = g_disorder;
+
+        pthread_mutex_lock(&g_conns_mu);
+        if (conn_add(sip, sport, pipefd[1]) != 0) {
+            pthread_mutex_unlock(&g_conns_mu);
+            close(pipefd[0]); close(pipefd[1]);
+            free(ca);
+            return;
+        }
+        pthread_mutex_unlock(&g_conns_mu);
+
+        pthread_t t;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        pthread_create(&t, &attr, conn_thread, ca);
+        pthread_attr_destroy(&attr);
+        return;
+    }
+
+    /* Data or ACK — forward to connection thread via pipe */
+    if (dlen > 0) {
+        pthread_mutex_lock(&g_conns_mu);
+        int pw = conn_get_pipe(sip, sport);
+        pthread_mutex_unlock(&g_conns_mu);
+        if (pw > 0) write(pw, data, dlen);
+    }
+}
+
+static void *tun_reader_thread(void *arg) {
+    (void)arg;
+    uint8_t buf[BUF_SIZE];
+    LOGI("TUN reader started fd=%d", g_tun_fd);
+
+    while (g_running) {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(g_tun_fd, &fds);
+        struct timeval tv = {1, 0};
+        int r = select(g_tun_fd+1, &fds, NULL, NULL, &tv);
+        if (r < 0) { if (errno == EINTR) continue; break; }
+        if (r == 0) continue;
+
+        ssize_t n = read(g_tun_fd, buf, sizeof(buf));
+        if (n <= 0) { if (errno == EINTR) continue; break; }
+
+        handle_packet(buf, (size_t)n);
+    }
+
+    LOGI("TUN reader stopped");
+    return NULL;
+}
+
+/* ------------------------------------------------------------------ */
+/* Public API                                                           */
+/* ------------------------------------------------------------------ */
+
+void tun_engine_set_jvm(JavaVM *jvm, jobject service) {
+    g_jvm     = jvm;
+    g_service = service;
+}
 
 int tun_engine_start(int tun_fd, int fake_ttl, int disorder) {
     if (g_running) return 0;
@@ -261,18 +479,20 @@ int tun_engine_start(int tun_fd, int fake_ttl, int disorder) {
     g_fake_ttl = fake_ttl;
     g_disorder = disorder;
     g_running  = 1;
+    memset(g_conns, 0, sizeof(g_conns));
 
-    if (pthread_create(&g_thread, NULL, engine_thread, NULL) != 0) {
+    if (pthread_create(&g_tun_thread, NULL, tun_reader_thread, NULL) != 0) {
         g_running = 0;
         return -1;
     }
-    LOGI("TUN engine started (fake_ttl=%d disorder=%d)", fake_ttl, disorder);
+    LOGI("TUN engine started fd=%d fake_ttl=%d disorder=%d",
+         tun_fd, fake_ttl, disorder);
     return 0;
 }
 
 void tun_engine_stop(void) {
     if (!g_running) return;
     g_running = 0;
-    pthread_join(g_thread, NULL);
+    pthread_join(g_tun_thread, NULL);
     LOGI("TUN engine stopped");
 }
