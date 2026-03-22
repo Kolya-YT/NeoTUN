@@ -12,10 +12,16 @@ set(TASK_DIR "${HEV_DIR}/third-part/hev-task-system")
 # ── collect sources helper ─────────────────────────────────────────────────────
 file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
 file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
+# hev-task-system needs ALL sources: kern + lib + mem (same as build.mk rwildcard)
 file(GLOB_RECURSE TASK_SRCS
     "${TASK_DIR}/src/kern/*.c"
-    "${TASK_DIR}/src/kern/*.S")
+    "${TASK_DIR}/src/kern/*.S"
+    "${TASK_DIR}/src/lib/*.c"
+    "${TASK_DIR}/src/lib/*.S"
+    "${TASK_DIR}/src/mem/*.c"
+    "${TASK_DIR}/src/mem/*.S")
 
+# arch-specific context-switch assembly
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/arm/hev-task-execute-aarch64.s")
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
@@ -26,6 +32,8 @@ elseif(ANDROID_ABI STREQUAL "x86")
     list(APPEND TASK_SRCS "${TASK_DIR}/src/arch/x86/hev-task-execute-x86.s")
 endif()
 file(GLOB_RECURSE HEV_SRCS  "${HEV_DIR}/src/*.c")
+# Exclude platform-specific tunnel backends not needed on Android
+list(FILTER HEV_SRCS EXCLUDE REGEX ".*(freebsd|macos|windows|netbsd).*")
 
 # ── lwip ───────────────────────────────────────────────────────────────────────
 add_library(lwip STATIC ${LWIP_SRCS})
@@ -45,7 +53,10 @@ target_compile_options(yaml PRIVATE -O2 -w)
 add_library(hev-task-system STATIC ${TASK_SRCS})
 target_include_directories(hev-task-system PUBLIC
     "${TASK_DIR}/include"
-    "${TASK_DIR}/src")
+    "${TASK_DIR}/src"
+    "${TASK_DIR}/src/kern"
+    "${TASK_DIR}/src/lib"
+    "${TASK_DIR}/src/mem")
 target_compile_definitions(hev-task-system PRIVATE
     ENABLE_STACK_OVERFLOW_DETECTION
     ENABLE_MEMALLOC_SLICE
@@ -68,7 +79,10 @@ target_include_directories(hev-socks5-tunnel PRIVATE
     "${LWIP_DIR}/src/ports/include"
     "${YAML_DIR}/include"
     "${TASK_DIR}/include"
-    "${TASK_DIR}/src")
+    "${TASK_DIR}/src"
+    "${TASK_DIR}/src/kern"
+    "${TASK_DIR}/src/lib"
+    "${TASK_DIR}/src/mem")
 target_compile_definitions(hev-socks5-tunnel PRIVATE
     FD_SET_DEFINED SOCKLEN_T_DEFINED ENABLE_LIBRARY)
 target_compile_options(hev-socks5-tunnel PRIVATE -O2 -w)
