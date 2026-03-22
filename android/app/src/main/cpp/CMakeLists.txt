@@ -11,7 +11,15 @@ set(YAML_DIR "${HEV_DIR}/third-part/yaml")
 set(TASK_DIR "${HEV_DIR}/third-part/hev-task-system")
 
 # ── lwip ───────────────────────────────────────────────────────────────────────
-file(GLOB_RECURSE LWIP_SRCS "${LWIP_DIR}/src/*.c" "${LWIP_DIR}/src/*.S")
+# Only core + netif sources — skip platform ports (win32/unix/pcap/tap/sio)
+file(GLOB_RECURSE LWIP_CORE_SRCS "${LWIP_DIR}/src/core/*.c")
+file(GLOB_RECURSE LWIP_API_SRCS  "${LWIP_DIR}/src/api/*.c")
+file(GLOB_RECURSE LWIP_NETIF_SRCS "${LWIP_DIR}/src/netif/*.c")
+# Exclude PPP (not needed, pulls in extra deps)
+list(FILTER LWIP_NETIF_SRCS EXCLUDE REGEX ".*/ppp/.*")
+set(LWIP_SRCS ${LWIP_CORE_SRCS} ${LWIP_API_SRCS} ${LWIP_NETIF_SRCS}
+    "${LWIP_DIR}/src/ports/lib/mem.c")
+
 add_library(lwip STATIC ${LWIP_SRCS})
 target_include_directories(lwip PUBLIC
     "${LWIP_DIR}/src/include"
@@ -20,10 +28,16 @@ target_compile_definitions(lwip PRIVATE FD_SET_DEFINED SOCKLEN_T_DEFINED)
 target_compile_options(lwip PRIVATE -O2 -w)
 
 # ── yaml ───────────────────────────────────────────────────────────────────────
-file(GLOB_RECURSE YAML_SRCS "${YAML_DIR}/src/*.c")
+file(GLOB YAML_SRCS "${YAML_DIR}/src/*.c")
 add_library(yaml STATIC ${YAML_SRCS})
-target_include_directories(yaml PUBLIC "${YAML_DIR}/include")
-target_compile_definitions(yaml PRIVATE HAVE_CONFIG_H=1)
+target_include_directories(yaml PUBLIC  "${YAML_DIR}/include")
+target_include_directories(yaml PRIVATE "${YAML_DIR}/src")
+# Version defines — replaces config.h (no autoconf on Android)
+target_compile_definitions(yaml PRIVATE
+    YAML_VERSION_MAJOR=0
+    YAML_VERSION_MINOR=2
+    YAML_VERSION_PATCH=5
+    "YAML_VERSION_STRING=\"0.2.5\"")
 target_compile_options(yaml PRIVATE -O2 -w)
 
 # ── hev-task-system ────────────────────────────────────────────────────────────
@@ -71,7 +85,6 @@ target_include_directories(hev-socks5-tunnel PRIVATE
     "${TASK_DIR}/src/kern/task"
     "${TASK_DIR}/src/lib"
     "${TASK_DIR}/src/mem")
-# ANDROID must be defined so hev-jni.c is compiled (it's wrapped in #ifdef ANDROID)
 target_compile_definitions(hev-socks5-tunnel PRIVATE
     ANDROID
     FD_SET_DEFINED
@@ -85,10 +98,7 @@ target_link_options(hev-socks5-tunnel PRIVATE
 
 # ── neotun_bypass ──────────────────────────────────────────────────────────────
 add_library(neotun_bypass SHARED
-    proxy_jni.c
-    bypass.c
-    socks5.c
-    utils.c)
+    proxy_jni.c bypass.c socks5.c utils.c)
 target_include_directories(neotun_bypass PRIVATE .)
 target_compile_definitions(neotun_bypass PRIVATE ANDROID_APP)
 target_compile_options(neotun_bypass PRIVATE -O2 -Wall -Wno-unused-parameter)
