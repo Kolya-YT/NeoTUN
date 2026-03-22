@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
@@ -44,40 +45,49 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(statusReceiver,
-            IntentFilter("com.neotun.dpi.STATUS"),
-            RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter("com.neotun.dpi.STATUS")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(statusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(statusReceiver, filter)
+        }
         updateUi(DpiVpnService.isRunning)
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(statusReceiver)
+        try { unregisterReceiver(statusReceiver) } catch (_: Exception) {}
     }
 
     private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
-        if (intent != null) startActivityForResult(intent, VPN_REQUEST_CODE)
-        else startBypass()
+        if (intent != null) {
+            startActivityForResult(intent, VPN_REQUEST_CODE)
+        } else {
+            startBypass()
+        }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == VPN_REQUEST_CODE && resultCode == Activity.RESULT_OK)
+        if (requestCode == VPN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             startBypass()
+        }
     }
 
     private fun startBypass() {
-        startForegroundService(
-            Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
-        )
+        val intent = Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
     }
 
     private fun stopBypass() {
-        startService(
-            Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_STOP)
-        )
+        startService(Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_STOP))
     }
 
     private fun updateUi(running: Boolean) {
@@ -90,7 +100,7 @@ class MainActivity : AppCompatActivity() {
             btnToggle.startAnimation(pulse)
         } else {
             btnToggle.setBackgroundResource(R.drawable.bg_button_idle)
-            ivShield.alpha = 0.4f
+            ivShield.alpha = 0.45f
             tvStatus.text = "Нажмите для включения"
             tvStatus.setTextColor(0xFF666688.toInt())
             btnToggle.clearAnimation()
