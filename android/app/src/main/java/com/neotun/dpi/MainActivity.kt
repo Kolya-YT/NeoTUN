@@ -15,6 +15,7 @@ import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -28,7 +29,12 @@ class MainActivity : AppCompatActivity() {
 
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            updateUi(intent.getBooleanExtra("running", false))
+            val running = intent.getBooleanExtra("running", false)
+            val error   = intent.getStringExtra("error") ?: ""
+            if (error.isNotEmpty()) {
+                Toast.makeText(this@MainActivity, "Ошибка: $error", Toast.LENGTH_LONG).show()
+            }
+            updateUi(running)
         }
     }
 
@@ -58,6 +64,10 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(statusReceiver, filter)
         }
         updateUi(DpiVpnService.isRunning)
+        // Show last error if any
+        if (DpiVpnService.lastError.isNotEmpty()) {
+            Toast.makeText(this, "Последняя ошибка: ${DpiVpnService.lastError}", Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onPause() {
@@ -75,6 +85,9 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_REQUEST_CODE && resultCode == Activity.RESULT_OK) startBypass()
+        else if (requestCode == VPN_REQUEST_CODE) {
+            Toast.makeText(this, "VPN разрешение отклонено", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startBypass() {
@@ -100,7 +113,8 @@ class MainActivity : AppCompatActivity() {
             btnToggle.setBackgroundResource(R.drawable.bg_button_idle)
             vGlow.setBackgroundResource(R.drawable.bg_glow)
             animateAlpha(ivShield, ivShield.alpha, 0.5f)
-            tvStatus.text = "Нажмите для подключения"
+            tvStatus.text = if (DpiVpnService.lastError.isEmpty()) "Нажмите для подключения"
+                            else "Ошибка — нажмите для повтора"
             animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF2E2E50.toInt())
             btnToggle.clearAnimation()
         }

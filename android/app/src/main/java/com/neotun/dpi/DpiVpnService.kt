@@ -14,162 +14,128 @@ import java.io.File
 class DpiVpnService : VpnService() {
 
     companion object {
-        const val TAG = "NeoTUN"
+        const val TAG          = "NeoTUN"
         const val ACTION_START = "com.neotun.dpi.START"
         const val ACTION_STOP  = "com.neotun.dpi.STOP"
         const val NOTIF_ID     = 1
-        const val CHANNEL_ID   = "neotun_channel"
+        const val CHANNEL_ID   = "neotun_vpn"
 
         @Volatile var isRunning = false
+        @Volatile var lastError = ""
+
+        private var bypassLoaded = false
+        private var tunnelLoaded = false
 
         init {
-            try {
-                System.loadLibrary("neotun_bypass")
-                Log.i(TAG, "neotun_bypass loaded")
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to load neotun_bypass: ${e.message}")
-            }
+            bypassLoaded = loadLib("neotun_bypass")
+            tunnelLoaded = loadLib("hev-socks5-tunnel")
+        }
+
+        private fun loadLib(name: String): Boolean = try {
+            System.loadLibrary(name)
+            Log.i(TAG, "$name loaded")
+            true
+        } catch (e: Throwable) {
+            Log.e(TAG, "$name FAILED: $e")
+            false
         }
     }
 
-    private var tunInterface: ParcelFileDescriptor? = null
-    private var workerThread: Thread? = null
+    // neotun_bypass JNI
+    private external fun nativeStartProxy(splitPos: Int, disorder: Int, tlsrecSplit: Int, oob: Int): Int
+    private external fun nativeStopProxy()
 
-    external fun nativeStartProxy(splitPos: Int, disorder: Int, tlsrecSplit: Int, oob: Int): Int
-    external fun nativeStopProxy()
+    // hev-socks5-tunnel JNI
+    private external fun TProxyStartService(configPath: String, fd: Int)
+    private external fun TProxyStopService()
+
+    private var tunFd: ParcelFileDescriptor? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.i(TAG, "onStartCommand: ${intent?.action}")
         when (intent?.action) {
-            ACTION_START -> startBypass()
-            ACTION_STOP  -> stopBypass()
+            ACTION_START -> doStart()
+            ACTION_STOP  -> doStop()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
-    private fun startBypass() {
+    private fun doStart() {
         if (isRunning) return
 
         createNotificationChannel()
         startForeground(NOTIF_ID, buildNotification("Запуск..."))
 
-        // Step 1: establish TUN on the service thread (safe for VpnService.Builder)
+        // 1. Start SOCKS5 bypass proxy
+        if (!bypassLoaded) { fail("neotun_bypass не загружен"); return }
+        val r = try { nativeStartProxy(2, 0, 1, 1) }
+                catch (e: Throwable) { fail("nativeStartProxy: $e"); return }
+        if (r != 0) { fail("proxy start failed: $r"); return }
+        Log.i(TAG, "SOCKS5 proxy on :1080")
+
+        // 2. Establish TUN
         val pfd = try {
             Builder()
                 .setSession("NeoTUN")
-                .addAddress("10.10.10.10", 32)
+                .addAddress("10.10.10.1", 24)
                 .addRoute("0.0.0.0", 0)
-                .addAddress("fd00::1", 128)
-                .addRoute("::", 0)
                 .addDnsServer("8.8.8.8")
-                .addDnsServer("8.8.4.4")
-                .setMtu(8500)
-                .apply {
-                    try { addDisallowedApplication(packageName) } catch (_: Exception) {}
-                }
+                .addDnsServer("1.1.1.1")
+                .setMtu(1500)
+                .apply { try { addDisallowedApplication(packageName) } catch (_: Throwable) {} }
                 .establish()
-        } catch (e: Exception) {
-            Log.e(TAG, "VPN establish failed: ${e.message}")
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return
-        }
+        } catch (e: Throwable) { nativeStopProxy(); fail("establish: $e"); return }
 
-        if (pfd == null) {
-            Log.e(TAG, "VPN establish returned null — permission not granted?")
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return
-        }
+        if (pfd == null) { nativeStopProxy(); fail("establish=null, нет разрешения?"); return }
+        tunFd = pfd
+        Log.i(TAG, "TUN fd=${pfd.fd}")
 
-        tunInterface = pfd
-        val fd = pfd.fd
-        Log.i(TAG, "TUN established, fd=$fd")
+        // 3. Start hev-socks5-tunnel (TUN → SOCKS5)
+        if (!tunnelLoaded) { nativeStopProxy(); pfd.close(); fail("hev-socks5-tunnel не загружен"); return }
 
-        // Step 2: start native proxy + tunnel in background thread
-        workerThread = Thread({
-            doStartNative(fd)
-        }, "neotun-worker").also { it.start() }
-    }
-
-    private fun doStartNative(tunFd: Int) {
-        // Start SOCKS5 bypass proxy on 127.0.0.1:1080
-        val proxyResult = try {
-            nativeStartProxy(splitPos = 2, disorder = 0, tlsrecSplit = 1, oob = 1)
-        } catch (e: Exception) {
-            Log.e(TAG, "nativeStartProxy exception: ${e.message}")
-            -1
-        }
-
-        if (proxyResult != 0) {
-            Log.e(TAG, "nativeStartProxy failed: $proxyResult")
-            cleanup()
-            return
-        }
-        Log.i(TAG, "SOCKS5 proxy started on :1080")
-
-        // Write hev-socks5-tunnel config
-        val config = buildTun2SocksConfig()
-        val configFile = try {
-            File.createTempFile("neotun_cfg", ".yml", cacheDir).also {
-                it.writeText(config)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Config write failed: ${e.message}")
-            nativeStopProxy()
-            cleanup()
-            return
-        }
-
-        // Start hev-socks5-tunnel: TUN fd → SOCKS5 127.0.0.1:1080
-        Log.i(TAG, "Starting hev-socks5-tunnel, fd=$tunFd, config=${configFile.absolutePath}")
+        val cfg = File(cacheDir, "neotun.yml").also { it.writeText(buildConfig()) }
         try {
-            TProxyService.startService(configFile.absolutePath, tunFd)
-        } catch (e: Exception) {
-            Log.e(TAG, "TProxyService.startService failed: ${e.message}")
-            nativeStopProxy()
-            cleanup()
-            return
+            TProxyStartService(cfg.absolutePath, pfd.fd)
+        } catch (e: Throwable) {
+            nativeStopProxy(); pfd.close(); fail("TProxyStartService: $e"); return
         }
 
         isRunning = true
+        lastError = ""
         updateNotification("Работает")
-        Log.i(TAG, "DPI bypass started successfully")
-        sendBroadcast(Intent("com.neotun.dpi.STATUS").putExtra("running", true))
+        broadcast(true)
+        Log.i(TAG, "VPN started OK")
     }
 
-    private fun cleanup() {
-        try { tunInterface?.close() } catch (_: Exception) {}
-        tunInterface = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun stopBypass() {
-        if (!isRunning && tunInterface == null) return
+    private fun doStop() {
+        if (!isRunning && tunFd == null) return
         isRunning = false
+        Log.i(TAG, "doStop")
 
-        try { TProxyService.stopService() } catch (e: Exception) { Log.e(TAG, "TProxyService stop: ${e.message}") }
-        try { nativeStopProxy() } catch (e: Exception) { Log.e(TAG, "nativeStopProxy: ${e.message}") }
-        try { tunInterface?.close() } catch (_: Exception) {}
-        tunInterface = null
-
-        workerThread?.interrupt()
-        workerThread = null
+        if (tunnelLoaded) try { TProxyStopService() } catch (e: Throwable) { Log.e(TAG, "TProxyStop: $e") }
+        if (bypassLoaded) try { nativeStopProxy() }   catch (e: Throwable) { Log.e(TAG, "proxyStop: $e") }
+        try { tunFd?.close() } catch (_: Throwable) {}
+        tunFd = null
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-        Log.i(TAG, "DPI bypass stopped")
-        sendBroadcast(Intent("com.neotun.dpi.STATUS").putExtra("running", false))
+        broadcast(false)
     }
 
-    override fun onDestroy() {
-        stopBypass()
-        super.onDestroy()
+    override fun onDestroy() { doStop(); super.onDestroy() }
+
+    private fun fail(msg: String) {
+        Log.e(TAG, "FAIL: $msg")
+        lastError = msg
+        isRunning = false
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        broadcast(false, msg)
     }
 
-    private fun buildTun2SocksConfig(): String = """
+    private fun buildConfig() = """
 tunnel:
-  mtu: 8500
+  mtu: 1500
 
 misc:
   task-stack-size: 81920
@@ -180,29 +146,25 @@ socks5:
   udp: udp
 """.trimIndent()
 
-    private fun buildNotification(status: String): Notification {
+    private fun broadcast(running: Boolean, error: String = "") =
+        sendBroadcast(Intent("com.neotun.dpi.STATUS")
+            .putExtra("running", running).putExtra("error", error))
+
+    private fun buildNotification(text: String): Notification {
         val pi = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
-        )
+            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("NeoTUN")
-            .setContentText(status)
+            .setContentTitle("NeoTUN").setContentText(text)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentIntent(pi)
-            .setOngoing(true)
-            .build()
+            .setContentIntent(pi).setOngoing(true).build()
     }
 
-    private fun updateNotification(status: String) {
-        getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification(status))
-    }
+    private fun updateNotification(text: String) =
+        getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification(text))
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val ch = NotificationChannel(CHANNEL_ID, "NeoTUN", NotificationManager.IMPORTANCE_LOW)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "NeoTUN VPN", NotificationManager.IMPORTANCE_LOW))
     }
 }
