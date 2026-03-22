@@ -3,10 +3,9 @@ name: Build NeoTUN
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
-  release:
-    types: [ created ]
 
 jobs:
   # ----------------------------------------------------------------
@@ -63,10 +62,11 @@ jobs:
           path: ${{ github.workspace }}/NeoTUN-Windows.zip
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: NeoTUN-Windows.zip
+          generate_release_notes: true
 
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
@@ -125,7 +125,8 @@ jobs:
           path: ${{ github.workspace }}/NeoTUN-Android.apk
 
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: NeoTUN-Android.apk
+          generate_release_notes: true
