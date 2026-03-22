@@ -22,11 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MinGW + CMake via Scoop
-        run: |
-          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-          irm get.scoop.sh | iex
-          scoop install mingw cmake --no-update-scoop
+      - name: Install MinGW
+        run: choco install mingw --no-progress -y
 
       - name: Download WinDivert
         run: |
