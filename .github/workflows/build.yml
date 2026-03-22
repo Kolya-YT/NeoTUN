@@ -92,27 +92,15 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Install NDK + CMake
+      - name: Install NDK
         run: |
           echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;27.0.12077973" \
-            "cmake;3.22.1" \
+            "ndk;26.3.11579264" \
             --sdk_root=$ANDROID_SDK_ROOT
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.3.11579264" >> $GITHUB_ENV
 
       - name: Write local.properties
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-
-      - name: Generate yaml config.h
-        run: |
-          printf '%s\n' \
-            '/* Generated for Android NDK build */' \
-            '#define HAVE_CONFIG_H 1' \
-            '#define YAML_VERSION_MAJOR 0' \
-            '#define YAML_VERSION_MINOR 2' \
-            '#define YAML_VERSION_PATCH 5' \
-            '#define YAML_VERSION_STRING "0.2.5"' \
-            > android/app/src/main/jni/hev-socks5-tunnel/third-part/yaml/src/config.h
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3

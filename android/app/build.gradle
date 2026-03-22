@@ -11,24 +11,25 @@ android {
         applicationId "com.neotun.dpi"
         minSdk 26
         targetSdk 34
-        versionCode 8
-        versionName "1.8"
+        versionCode 9
+        versionName "1.9"
 
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
         }
 
         externalNativeBuild {
-            cmake {
-                arguments "-DANDROID_STL=none", "-DCMAKE_BUILD_TYPE=Debug"
+            ndkBuild {
+                // Pass package name so hev-jni.c registers JNI methods correctly
+                arguments "APP_CFLAGS+=-DPKGNAME=com/neotun/dpi"
+                arguments "APP_LDFLAGS+=-Wl,--build-id=none"
             }
         }
     }
 
     externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.22.1"
+        ndkBuild {
+            path "src/main/jni/Android.mk"
         }
     }
 
