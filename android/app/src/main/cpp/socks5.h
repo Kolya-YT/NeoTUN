@@ -24,3 +24,10 @@ void proxy_tunnel(sock_t client, sock_t remote, const bypass_opts_t *opts);
 
 /* Обработать одно клиентское подключение */
 void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *upstream);
+
+/* Platform hook: protect socket from VPN routing loop (Android only) */
+#ifdef ANDROID_APP
+void android_protect_socket(int fd);
+#else
+static inline void android_protect_socket(int fd) { (void)fd; }
+#endif

@@ -360,6 +360,8 @@ void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *u
             sock_close(client);
             return;
         }
+        /* Protect from VPN routing loop on Android */
+        android_protect_socket((int)remote);
         set_nodelay(remote);
 
         if (connect(remote, res->ai_addr, (int)res->ai_addrlen) != 0) {

@@ -20,12 +20,35 @@
 static volatile int  g_running   = 0;
 static int           g_server_fd = -1;
 static pthread_t     g_thread;
-
 static bypass_opts_t g_opts;
 
-typedef struct {
-    sock_t client;
-} thread_arg_t;
+/* ── VpnService.protect() callback ─────────────────────────────────────────── */
+static JavaVM   *g_jvm     = NULL;
+static jobject   g_service = NULL;  /* global ref to DpiVpnService instance */
+static jmethodID g_protect = NULL;
+
+/*
+ * Called from socks5.c before connect() on every outgoing socket.
+ * Without this, the socket goes through TUN → infinite loop.
+ */
+void android_protect_socket(int fd) {
+    if (!g_jvm || !g_service || !g_protect) return;
+
+    JNIEnv *env = NULL;
+    int attached = 0;
+    if ((*g_jvm)->GetEnv(g_jvm, (void **)&env, JNI_VERSION_1_4) != JNI_OK) {
+        (*g_jvm)->AttachCurrentThread(g_jvm, &env, NULL);
+        attached = 1;
+    }
+    if (!env) return;
+
+    (*env)->CallBooleanMethod(env, g_service, g_protect, (jint)fd);
+
+    if (attached) (*g_jvm)->DetachCurrentThread(g_jvm);
+}
+
+/* ── client thread ──────────────────────────────────────────────────────────── */
+typedef struct { sock_t client; } thread_arg_t;
 
 static void *client_thread(void *arg) {
     thread_arg_t *ta = (thread_arg_t *)arg;
@@ -38,7 +61,7 @@ static void *client_thread(void *arg) {
 
 static void *server_thread(void *arg) {
     (void)arg;
-    LOGI("SOCKS5 proxy started on 127.0.0.1:%d", 1080);
+    LOGI("SOCKS5 proxy started on 127.0.0.1:1080");
 
     while (g_running) {
         struct sockaddr_in ca;
@@ -64,19 +87,26 @@ static void *server_thread(void *arg) {
     return NULL;
 }
 
+/* ── JNI exports ────────────────────────────────────────────────────────────── */
+
 JNIEXPORT jint JNICALL
 Java_com_neotun_dpi_DpiVpnService_nativeStartProxy(
         JNIEnv *env, jobject thiz,
         jint split_pos, jint disorder,
         jint tlsrec_split, jint oob)
 {
-    (void)env; (void)thiz;
-
     if (g_running) return 0;
+
+    /* Cache JVM + service ref + protect() method for socket protection */
+    (*env)->GetJavaVM(env, &g_jvm);
+    if (g_service) { (*env)->DeleteGlobalRef(env, g_service); }
+    g_service = (*env)->NewGlobalRef(env, thiz);
+    jclass cls = (*env)->GetObjectClass(env, thiz);
+    g_protect  = (*env)->GetMethodID(env, cls, "protect", "(I)Z");
 
     g_opts.split_pos    = split_pos;
     g_opts.disorder     = disorder;
-    g_opts.fake_ttl     = 0;   /* disabled on Android: userspace socket, TTL trick unreliable */
+    g_opts.fake_ttl     = 0;
     g_opts.tlsrec_split = tlsrec_split;
     g_opts.oob          = oob;
 
@@ -113,7 +143,7 @@ Java_com_neotun_dpi_DpiVpnService_nativeStartProxy(
 JNIEXPORT void JNICALL
 Java_com_neotun_dpi_DpiVpnService_nativeStopProxy(JNIEnv *env, jobject thiz)
 {
-    (void)env; (void)thiz;
+    (void)thiz;
     if (!g_running) return;
     g_running = 0;
     if (g_server_fd >= 0) {
@@ -122,4 +152,11 @@ Java_com_neotun_dpi_DpiVpnService_nativeStopProxy(JNIEnv *env, jobject thiz)
         g_server_fd = -1;
     }
     pthread_join(g_thread, NULL);
+
+    if (g_service) {
+        (*env)->DeleteGlobalRef(env, g_service);
+        g_service = NULL;
+    }
+    g_jvm     = NULL;
+    g_protect = NULL;
 }

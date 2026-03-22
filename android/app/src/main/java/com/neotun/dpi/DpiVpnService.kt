@@ -176,13 +176,15 @@ class DpiVpnService : VpnService() {
 tunnel:
   mtu: 1500
 
-misc:
-  task-stack-size: 81920
-
 socks5:
   address: 127.0.0.1
   port: 1080
-  udp: udp
+  udp: tcp
+
+misc:
+  task-stack-size: 81920
+  log-file: stderr
+  log-level: warn
 """.trimIndent()
 
     private fun broadcast(running: Boolean, error: String = "") =
