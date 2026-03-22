@@ -72,7 +72,9 @@ class DpiVpnService : VpnService() {
             return
         }
         val proxyResult = try {
-            nativeStartProxy(2, 0, 1, 1)
+            // split_pos=0 (use SNI-based split), disorder=0, tlsrec_split=1, oob=0
+            // fake_ttl is disabled on Android (userspace socket, TTL trick doesn't work)
+            nativeStartProxy(0, 0, 1, 0)
         } catch (e: Throwable) {
             fail("nativeStartProxy: $e")
             return

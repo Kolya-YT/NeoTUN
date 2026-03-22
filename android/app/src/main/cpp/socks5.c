@@ -185,6 +185,10 @@ void proxy_tunnel(sock_t client, sock_t remote, const bypass_opts_t *opts) {
     uint8_t buf[16384];
     int first_from_client = 1;
 
+    /* Buffer for assembling the first TLS ClientHello */
+    uint8_t hello_buf[16384];
+    int hello_len = 0;
+
     for (;;) {
         fd_set rd;
         FD_ZERO(&rd);
@@ -199,9 +203,28 @@ void proxy_tunnel(sock_t client, sock_t remote, const bypass_opts_t *opts) {
         if (FD_ISSET(client, &rd)) {
             int n = recv(client, (char*)buf, sizeof(buf), 0);
             if (n <= 0) break;
+
             if (first_from_client) {
-                first_from_client = 0;
-                if (bypass_send(remote, buf, (size_t)n, opts) < 0) break;
+                /* Accumulate until we have a full TLS record or non-TLS data */
+                if (hello_len + n > (int)sizeof(hello_buf))
+                    n = (int)sizeof(hello_buf) - hello_len;
+                memcpy(hello_buf + hello_len, buf, n);
+                hello_len += n;
+
+                /* Check if it's a TLS ClientHello and we have the full record */
+                int is_tls = (hello_len >= 5 &&
+                              hello_buf[0] == 0x16 &&
+                              hello_buf[1] == 0x03);
+                int tls_record_len = is_tls
+                    ? (5 + ((hello_buf[3] << 8) | hello_buf[4]))
+                    : 0;
+
+                /* Send once we have the full record, or it's not TLS */
+                if (!is_tls || hello_len >= tls_record_len) {
+                    first_from_client = 0;
+                    if (bypass_send(remote, hello_buf, (size_t)hello_len, opts) < 0) break;
+                }
+                /* else: keep accumulating */
             } else {
                 if (send_all(remote, buf, (size_t)n) < 0) break;
             }
