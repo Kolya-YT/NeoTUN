@@ -34,6 +34,16 @@ add_library(hev-task-system STATIC ${TASK_SRCS})
 target_include_directories(hev-task-system PUBLIC
     "${TASK_DIR}/include"
     "${TASK_DIR}/src")
+target_compile_definitions(hev-task-system PRIVATE
+    ENABLE_STACK_OVERFLOW_DETECTION
+    ENABLE_MEMALLOC_SLICE
+    ENABLE_IO_SPLICE_SYSCALL
+    CONFIG_STACK_BACKEND=STACK_MMAP
+    CONFIG_STACK_OVERFLOW_DETECTION=1
+    CONFIG_MEMALLOC_SLICE_ALIGN=64
+    CONFIG_MEMALLOC_SLICE_MAX_SIZE=4096
+    CONFIG_MEMALLOC_SLICE_MAX_COUNT=1000
+    CONFIG_SCHED_CLOCK=CLOCK_NONE)
 target_compile_options(hev-task-system PRIVATE -O2 -w -fvisibility=hidden)
 
 # ── hev-socks5-tunnel ──────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_STL=none"
+                arguments "-DANDROID_STL=none", "-DCMAKE_BUILD_TYPE=Debug"
             }
         }
     }
