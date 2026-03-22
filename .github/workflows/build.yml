@@ -65,18 +65,12 @@ jobs:
             --add-data "windows/WinDivert.dll;." `
             --add-data "windows/WinDivert64.sys;." `
             windows/gui.py
-          # Pack onedir output into a single exe using 7zip self-extractor alternative:
-          # just zip the dist/NeoTUN folder and upload as-is, user runs NeoTUN.exe inside
-          Compress-Archive dist/NeoTUN/* ${{ github.workspace }}/NeoTUN-Windows.zip
-          # Also copy the main exe for direct download
-          Copy-Item dist/NeoTUN/NeoTUN.exe ${{ github.workspace }}/NeoTUN-Windows.exe
+          Compress-Archive -Path dist/NeoTUN -DestinationPath ${{ github.workspace }}/NeoTUN-Windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: |
-            ${{ github.workspace }}/NeoTUN-Windows.exe
-            ${{ github.workspace }}/NeoTUN-Windows.zip
+          path: ${{ github.workspace }}/NeoTUN-Windows.zip
 
   # ----------------------------------------------------------------
   # Android: Gradle + NDK → NeoTUN.apk
