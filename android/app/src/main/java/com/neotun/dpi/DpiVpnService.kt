@@ -132,7 +132,7 @@ socks5:
             PendingIntent.FLAG_IMMUTABLE
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("NeoTUN")
+            .setContentTitle("NeoTUN - DPI")
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentIntent(pi)
