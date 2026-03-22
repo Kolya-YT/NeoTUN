@@ -251,20 +251,19 @@ static int extract_sni_string(const uint8_t *payload, UINT payload_len,
  * - gstatic.com, googleapis.com: Google CDN
  * Эти домены либо не заблокированы, либо split их ломает.
  */
+/*
+ * Домены которые НЕ трогаем.
+ * Discord: WebSocket — split ломает handshake.
+ * YouTube CDN убран из списка — провайдер может блокировать
+ * googlevideo.com так же как youtube.com, bypass нужен.
+ */
 static const char *NO_TOUCH[] = {
-    /* Discord */
     "discord.com",
     "discordapp.com",
     "discordapp.net",
     "discord.gg",
     "discord.media",
     "discordcdn.com",
-    /* YouTube CDN — видео грузится отсюда, не заблокировано */
-    "googlevideo.com",
-    "ytimg.com",
-    "ggpht.com",
-    "gstatic.com",
-    "googleapis.com",
     NULL
 };
 
