@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
-"""Patch hev-jni.c to fix JNI_OnLoad crash when FindClass returns NULL."""
+"""Patch hev-jni.c and Android.mk to fix JNI compilation on Android."""
 import sys
 
-path = "android/app/src/main/jni/hev-socks5-tunnel/src/hev-jni.c"
-
+# ── 1. Patch Android.mk — add -DANDROID flag ─────────────────────────────────
+mk_path = "android/app/src/main/jni/hev-socks5-tunnel/Android.mk"
 try:
-    src = open(path).read()
+    mk = open(mk_path).read()
+    old_flags = "LOCAL_CFLAGS += -DFD_SET_DEFINED -DSOCKLEN_T_DEFINED -DENABLE_LIBRARY"
+    new_flags = "LOCAL_CFLAGS += -DFD_SET_DEFINED -DSOCKLEN_T_DEFINED -DENABLE_LIBRARY -DANDROID"
+    if "-DANDROID" in mk:
+        print("Skip: -DANDROID already in Android.mk")
+    elif old_flags in mk:
+        mk = mk.replace(old_flags, new_flags)
+        open(mk_path, "w").write(mk)
+        print("Patched: added -DANDROID to Android.mk")
+    else:
+        print("WARNING: could not find LOCAL_CFLAGS line in Android.mk")
 except FileNotFoundError:
-    print(f"ERROR: {path} not found")
+    print(f"WARNING: {mk_path} not found")
+
+# ── 2. Patch hev-jni.c ───────────────────────────────────────────────────────
+jni_path = "android/app/src/main/jni/hev-socks5-tunnel/src/hev-jni.c"
+try:
+    src = open(jni_path).read()
+except FileNotFoundError:
+    print(f"ERROR: {jni_path} not found")
     sys.exit(1)
 
 changed = False
 
-# 1. Null-check FindClass in JNI_OnLoad
+# Null-check FindClass in JNI_OnLoad
 old1 = (
     '    klass = (*env)->FindClass (env, STR (PKGNAME) "/" STR (CLSNAME));\n'
     '    (*env)->RegisterNatives (env, klass, native_methods,\n'
@@ -36,29 +53,30 @@ if old1 in src:
 else:
     print("Skip: JNI_OnLoad patch already applied or pattern not found")
 
-# 2. Add standard JNI name-mangled exports before #endif /* ANDROID */
-exports = r"""
-/* Standard JNI name-mangled exports — fallback when RegisterNatives fails */
-JNIEXPORT void JNICALL
-Java_com_neotun_dpi_TProxyService_TProxyStartService (JNIEnv *env, jobject thiz,
-                                                       jstring config_path, jint fd)
-{
-    native_start_service (env, thiz, config_path, fd);
-}
-
-JNIEXPORT void JNICALL
-Java_com_neotun_dpi_TProxyService_TProxyStopService (JNIEnv *env, jobject thiz)
-{
-    native_stop_service (env, thiz);
-}
-
-JNIEXPORT jlongArray JNICALL
-Java_com_neotun_dpi_TProxyService_TProxyGetStats (JNIEnv *env, jobject thiz)
-{
-    return native_get_stats (env, thiz);
-}
-
-"""
+# Add standard JNI name-mangled exports before #endif /* ANDROID */
+exports = (
+    "\n"
+    "/* Standard JNI name-mangled exports - fallback when RegisterNatives fails */\n"
+    "JNIEXPORT void JNICALL\n"
+    "Java_com_neotun_dpi_TProxyService_TProxyStartService (JNIEnv *env, jobject thiz,\n"
+    "                                                       jstring config_path, jint fd)\n"
+    "{\n"
+    "    native_start_service (env, thiz, config_path, fd);\n"
+    "}\n"
+    "\n"
+    "JNIEXPORT void JNICALL\n"
+    "Java_com_neotun_dpi_TProxyService_TProxyStopService (JNIEnv *env, jobject thiz)\n"
+    "{\n"
+    "    native_stop_service (env, thiz);\n"
+    "}\n"
+    "\n"
+    "JNIEXPORT jlongArray JNICALL\n"
+    "Java_com_neotun_dpi_TProxyService_TProxyGetStats (JNIEnv *env, jobject thiz)\n"
+    "{\n"
+    "    return native_get_stats (env, thiz);\n"
+    "}\n"
+    "\n"
+)
 marker = "#endif /* ANDROID */"
 if "Java_com_neotun_dpi_TProxyService_TProxyStartService" in src:
     print("Skip: standard JNI exports already present")
@@ -70,7 +88,7 @@ else:
     print("WARNING: #endif /* ANDROID */ marker not found")
 
 if changed:
-    open(path, "w").write(src)
-    print("Done — file written")
+    open(jni_path, "w").write(src)
+    print("Done - hev-jni.c written")
 else:
-    print("Done — no changes needed")
+    print("Done - no changes to hev-jni.c")
