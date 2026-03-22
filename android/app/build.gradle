@@ -11,16 +11,17 @@ android {
         applicationId "com.neotun.dpi"
         minSdk 26
         targetSdk 34
-        versionCode 6
-        versionName "1.6"
+        versionCode 8
+        versionName "1.8"
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
 
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=none"
             }
-        }
-        ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
         }
     }
 
@@ -46,41 +47,6 @@ android {
         jvmTarget = '1.8'
     }
 }
-
-// ndk-build: hev-socks5-tunnel
-tasks.register('buildHevTunnel', Exec) {
-    // Prefer ANDROID_NDK_HOME env var, fall back to ndkDirectory
-    def ndkPath = System.getenv("ANDROID_NDK_HOME")
-        ?: System.getenv("ANDROID_NDK_ROOT")
-        ?: android.ndkDirectory?.absolutePath
-
-    if (!ndkPath) {
-        throw new GradleException("NDK not found. Set ANDROID_NDK_HOME or install NDK via SDK manager.")
-    }
-
-    def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
-    def ndkBuild = ndkPath + (isWindows ? "/ndk-build.cmd" : "/ndk-build")
-
-    def jniDir  = file("src/main/jni").absolutePath
-    def libsOut = file("src/main/jniLibs").absolutePath
-
-    executable ndkBuild
-    args = [
-        "NDK_PROJECT_PATH=${jniDir}",
-        "NDK_LIBS_OUT=${libsOut}",
-        "APP_BUILD_SCRIPT=${jniDir}/Android.mk",
-        "NDK_APPLICATION_MK=${jniDir}/Application.mk",
-        "-j4"
-    ]
-
-    doFirst {
-        println "ndk-build: ${ndkBuild}"
-        println "jni dir:   ${jniDir}"
-        println "libs out:  ${libsOut}"
-    }
-}
-
-tasks.preBuild.dependsOn('buildHevTunnel')
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
