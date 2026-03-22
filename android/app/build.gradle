@@ -21,10 +21,7 @@ android {
 
         externalNativeBuild {
             ndkBuild {
-                // Pass package name so hev-jni.c registers JNI methods correctly
-                arguments "APP_CFLAGS+=-DPKGNAME=com/neotun/dpi"
                 arguments "APP_CFLAGS+=-DANDROID"
-                arguments "APP_LDFLAGS+=-Wl,--build-id=none"
             }
         }
     }
