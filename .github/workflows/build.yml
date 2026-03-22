@@ -12,24 +12,22 @@ permissions:
 
 jobs:
   # ----------------------------------------------------------------
-  # Windows: MinGW + CMake → neotun.exe
+  # Windows: MinGW + CMake → neotun.exe + PyInstaller → NeoTUN-Windows.exe
   # ----------------------------------------------------------------
   build-windows:
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: pwsh
-        working-directory: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install MinGW + CMake via Scoop
+        shell: pwsh
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           irm get.scoop.sh | iex
           scoop install mingw cmake --no-update-scoop
 
       - name: Download WinDivert
+        shell: pwsh
         run: |
           $url = "https://github.com/basil00/Divert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip"
           Invoke-WebRequest $url -OutFile WinDivert.zip
@@ -42,7 +40,8 @@ jobs:
           Copy-Item "$src/x64/WinDivert.lib"     vendor/windivert/x64/
           Copy-Item "$src/x64/WinDivert64.sys"   vendor/windivert/x64/
 
-      - name: Build neotun.exe (CMake)
+      - name: Build neotun.exe
+        shell: pwsh
         run: |
           New-Item -ItemType Directory -Force build | Out-Null
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
@@ -54,6 +53,7 @@ jobs:
           python-version: '3.11'
 
       - name: Build GUI exe (PyInstaller)
+        shell: pwsh
         run: |
           pip install customtkinter pyinstaller --quiet
           Copy-Item build/neotun.exe                     windows/
@@ -65,15 +65,14 @@ jobs:
             --add-data "windows/WinDivert.dll;." `
             --add-data "windows/WinDivert64.sys;." `
             windows/gui.py
-          Copy-Item dist/NeoTUN-Windows.exe ${{ github.workspace }}/NeoTUN-Windows.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: NeoTUN-Windows
-          path: ${{ github.workspace }}/NeoTUN-Windows.exe
+          path: dist/NeoTUN-Windows.exe
 
   # ----------------------------------------------------------------
-  # Android: Gradle + NDK → NeoTUN.apk
+  # Android: Gradle + NDK → NeoTUN-Android.apk
   # ----------------------------------------------------------------
   build-android:
     runs-on: ubuntu-latest
@@ -83,8 +82,8 @@ jobs:
           submodules: recursive
 
       - name: Init nested submodules
+        shell: bash
         run: git submodule update --init --recursive
-        working-directory: ${{ github.workspace }}
 
       - uses: actions/setup-java@v4
         with:
@@ -94,7 +93,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK
+      - name: Install NDK + CMake
+        shell: bash
         run: |
           echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
             "ndk;27.0.12077973" \
@@ -103,16 +103,11 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Write local.properties
+        shell: bash
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: gradle-${{ hashFiles('android/**/*.gradle') }}
-          restore-keys: gradle-
-
       - name: Generate yaml config.h
+        shell: bash
         run: |
           cat > android/app/src/main/jni/hev-socks5-tunnel/third-part/yaml/src/config.h << 'EOF'
           /* Generated for Android NDK build */
@@ -123,13 +118,25 @@ jobs:
           #define YAML_VERSION_STRING "0.2.5"
           EOF
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ hashFiles('android/**/*.gradle') }}
+          restore-keys: gradle-
+
       - name: Build APK
+        shell: bash
         run: |
           chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug --no-daemon --stacktrace
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Collect APK
-        run: find android -name "*.apk" | head -1 | xargs -I{} cp {} NeoTUN-Android.apk
+        shell: bash
+        run: |
+          APK=$(find android -name "*.apk" | head -1)
+          cp "$APK" NeoTUN-Android.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -137,8 +144,7 @@ jobs:
           path: NeoTUN-Android.apk
 
   # ----------------------------------------------------------------
-  # Release: создаём GitHub Release с файлами напрямую
-  # Запускается только при пуше тега v*
+  # Release — только при пуше тега v*
   # ----------------------------------------------------------------
   release:
     if: startsWith(github.ref, 'refs/tags/')
