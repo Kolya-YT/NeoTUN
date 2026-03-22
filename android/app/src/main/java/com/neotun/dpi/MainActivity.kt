@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnToggle: FrameLayout
     private lateinit var ivShield: ImageView
     private lateinit var tvStatus: TextView
+    private lateinit var vGlow: View
 
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -37,6 +39,7 @@ class MainActivity : AppCompatActivity() {
         btnToggle = findViewById(R.id.btnToggle)
         ivShield  = findViewById(R.id.ivShield)
         tvStatus  = findViewById(R.id.tvStatus)
+        vGlow     = findViewById(R.id.vGlow)
 
         btnToggle.setOnClickListener {
             if (DpiVpnService.isRunning) stopBypass() else requestVpnPermission()
@@ -75,9 +78,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startBypass() {
-        val intent = Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
-        else startService(intent)
+        val i = Intent(this, DpiVpnService::class.java).setAction(DpiVpnService.ACTION_START)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i)
+        else startService(i)
     }
 
     private fun stopBypass() {
@@ -87,23 +90,25 @@ class MainActivity : AppCompatActivity() {
     private fun updateUi(running: Boolean) {
         if (running) {
             btnToggle.setBackgroundResource(R.drawable.bg_button_active)
+            vGlow.setBackgroundResource(R.drawable.bg_glow_active)
             animateAlpha(ivShield, ivShield.alpha, 1.0f)
             tvStatus.text = "Подключено"
-            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF27AE60.toInt())
+            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF00D26A.toInt())
             val pulse = AnimationUtils.loadAnimation(this, R.anim.anim_pulse)
             btnToggle.startAnimation(pulse)
         } else {
             btnToggle.setBackgroundResource(R.drawable.bg_button_idle)
-            animateAlpha(ivShield, ivShield.alpha, 0.4f)
+            vGlow.setBackgroundResource(R.drawable.bg_glow)
+            animateAlpha(ivShield, ivShield.alpha, 0.5f)
             tvStatus.text = "Нажмите для подключения"
-            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF44445A.toInt())
+            animateTextColor(tvStatus, tvStatus.currentTextColor, 0xFF2E2E50.toInt())
             btnToggle.clearAnimation()
         }
     }
 
     private fun animateAlpha(view: ImageView, from: Float, to: Float) {
         ValueAnimator.ofFloat(from, to).apply {
-            duration = 300
+            duration = 400
             addUpdateListener { view.alpha = it.animatedValue as Float }
             start()
         }
@@ -111,7 +116,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun animateTextColor(view: TextView, from: Int, to: Int) {
         ValueAnimator.ofObject(ArgbEvaluator(), from, to).apply {
-            duration = 300
+            duration = 400
             addUpdateListener { view.setTextColor(it.animatedValue as Int) }
             start()
         }
