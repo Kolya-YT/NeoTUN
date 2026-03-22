@@ -1,0 +1,120 @@
+name: Build NeoTUN
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  # ----------------------------------------------------------------
+  # Windows: MinGW + CMake → neotun.exe
+  # ----------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+
+      - name: Download WinDivert
+        shell: pwsh
+        run: |
+          $url = "https://github.com/basil00/Divert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip"
+          Invoke-WebRequest $url -OutFile WinDivert.zip
+          Expand-Archive WinDivert.zip -DestinationPath WinDivert_sdk
+          $src = Get-ChildItem WinDivert_sdk -Recurse -Directory | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path vendor/windivert/include
+          New-Item -ItemType Directory -Force -Path vendor/windivert/x64
+          Copy-Item "$($src.FullName)/include/windivert.h" vendor/windivert/include/
+          Copy-Item "$($src.FullName)/x64/WinDivert.dll"   vendor/windivert/x64/
+          Copy-Item "$($src.FullName)/x64/WinDivert.lib"   vendor/windivert/x64/
+          Copy-Item "$($src.FullName)/x64/WinDivert64.sys" vendor/windivert/x64/
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc
+          ninja
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist
+          Copy-Item build/neotun.exe          dist/
+          Copy-Item vendor/windivert/x64/WinDivert.dll    dist/
+          Copy-Item vendor/windivert/x64/WinDivert64.sys  dist/
+          Copy-Item windows/gui.py            dist/
+          Compress-Archive dist/* NeoTUN-Windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoTUN-Windows
+          path: NeoTUN-Windows.zip
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: NeoTUN-Windows.zip
+
+  # ----------------------------------------------------------------
+  # Android: Gradle + NDK → NeoTUN.apk
+  # ----------------------------------------------------------------
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle') }}
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          find android -name "*.apk" -exec cp {} NeoTUN-Android.apk \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoTUN-Android
+          path: NeoTUN-Android.apk
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: NeoTUN-Android.apk

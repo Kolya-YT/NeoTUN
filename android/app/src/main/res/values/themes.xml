@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NeoTUN" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#27AE60</item>
+        <item name="colorPrimaryVariant">#1E8449</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="android:windowBackground">#1A1A2E</item>
+    </style>
+</resources>

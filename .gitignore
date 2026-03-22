@@ -1,0 +1,26 @@
+# Build outputs
+build/
+dist/
+*.zip
+*.apk
+*.exe
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Android
+android/.gradle/
+android/app/build/
+android/local.properties
+*.iml
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# WinDivert sys (locked by OS)
+*.sys
