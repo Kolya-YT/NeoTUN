@@ -104,3 +104,6 @@ target_compile_definitions(neotun_bypass PRIVATE ANDROID_APP)
 target_compile_options(neotun_bypass PRIVATE -O2 -Wall -Wno-unused-parameter)
 find_library(log-lib log)
 target_link_libraries(neotun_bypass ${log-lib})
+target_link_options(neotun_bypass PRIVATE
+    -Wl,-z,max-page-size=16384
+    -Wl,-z,common-page-size=16384)

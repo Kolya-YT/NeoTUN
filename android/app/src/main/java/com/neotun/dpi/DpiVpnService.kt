@@ -4,11 +4,13 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.pm.ServiceInfo
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.core.app.ServiceCompat
 import java.io.File
 
 class DpiVpnService : VpnService() {
@@ -64,7 +66,16 @@ class DpiVpnService : VpnService() {
         if (isRunning) return
 
         createNotificationChannel()
-        startForeground(NOTIF_ID, buildNotification("Запуск..."))
+        ServiceCompat.startForeground(
+            this,
+            NOTIF_ID,
+            buildNotification("Запуск..."),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+            } else {
+                0
+            }
+        )
 
         // 1. Start SOCKS5 bypass proxy on :1080
         if (!bypassLoaded) {
