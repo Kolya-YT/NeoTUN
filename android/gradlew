@@ -1,4 +1,24 @@
 #!/bin/sh
-# Gradle wrapper script for Unix
-exec "$(dirname "$0")/gradle/wrapper/gradle-wrapper.jar" "$@" 2>/dev/null || \
-  gradle "$@"
+
+set -eu
+
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+
+if [ -n "${JAVA_HOME:-}" ]; then
+  JAVA_CMD="$JAVA_HOME/bin/java"
+else
+  JAVA_CMD=java
+fi
+
+if [ -f "$CLASSPATH" ]; then
+  exec "$JAVA_CMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+fi
+
+if command -v gradle >/dev/null 2>&1; then
+  echo "gradle-wrapper.jar not found, falling back to installed Gradle" >&2
+  exec gradle "$@"
+fi
+
+echo "ERROR: gradle-wrapper.jar is missing and no 'gradle' executable is available in PATH." >&2
+exit 1

@@ -9,11 +9,14 @@
 #else
   #include <sys/select.h>
   #include <netdb.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
 #endif
 
 /* ---- HTTP CONNECT ---- */
 static int http_connect_handshake(sock_t client, socks5_target_t *target,
                                    uint8_t *leftover, int *leftover_len) {
+    (void)leftover;
     /* Читаем HTTP запрос побайтово до \r\n\r\n */
     char buf[2048];
     int len = 0;
@@ -112,6 +115,189 @@ static void send_socks5_reply(sock_t client, uint8_t status) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
     send(client, (char*)reply, 10, 0);
+}
+
+static void send_socks5_reply_bound(sock_t client, uint8_t status,
+                                    uint32_t bind_addr_be, uint16_t bind_port_be) {
+    uint8_t reply[10] = {
+        SOCKS5_VERSION, status, 0x00, SOCKS5_ATYP_IPV4,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    memcpy(reply + 4, &bind_addr_be, 4);
+    memcpy(reply + 8, &bind_port_be, 2);
+    send(client, (char*)reply, 10, 0);
+}
+
+static int resolve_udp_target(const socks5_target_t *target, struct sockaddr_in *dst) {
+    struct addrinfo hints, *res = NULL;
+    char port_str[8];
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    snprintf(port_str, sizeof(port_str), "%u", (unsigned)target->port);
+
+    if (getaddrinfo(target->host, port_str, &hints, &res) != 0 || !res) {
+        return -1;
+    }
+
+    memset(dst, 0, sizeof(*dst));
+    memcpy(dst, res->ai_addr, sizeof(*dst));
+    freeaddrinfo(res);
+    return 0;
+}
+
+static int parse_socks5_udp_packet(const uint8_t *buf, size_t len,
+                                   socks5_target_t *target,
+                                   const uint8_t **payload,
+                                   size_t *payload_len) {
+    size_t pos = 0;
+    memset(target, 0, sizeof(*target));
+
+    if (len < 10) return -1;
+    if (buf[0] != 0x00 || buf[1] != 0x00) return -1;
+    if (buf[2] != 0x00) return -1; /* fragmentation is not supported */
+
+    pos = 3;
+    switch (buf[pos++]) {
+        case SOCKS5_ATYP_IPV4:
+            if (len < pos + 4 + 2) return -1;
+            snprintf(target->host, sizeof(target->host),
+                     "%u.%u.%u.%u", buf[pos], buf[pos+1], buf[pos+2], buf[pos+3]);
+            pos += 4;
+            break;
+        case SOCKS5_ATYP_DOMAIN: {
+            uint8_t dlen;
+            if (len < pos + 1) return -1;
+            dlen = buf[pos++];
+            if (len < pos + dlen + 2) return -1;
+            memcpy(target->host, buf + pos, dlen);
+            target->host[dlen] = '\0';
+            pos += dlen;
+            break;
+        }
+        case SOCKS5_ATYP_IPV6:
+        default:
+            return -1;
+    }
+
+    target->port = (uint16_t)((buf[pos] << 8) | buf[pos + 1]);
+    pos += 2;
+
+    *payload = buf + pos;
+    *payload_len = len - pos;
+    return 0;
+}
+
+static int build_socks5_udp_response(uint8_t *out, size_t out_cap,
+                                     const struct sockaddr_in *src,
+                                     const uint8_t *payload, size_t payload_len) {
+    if (out_cap < 10 + payload_len) return -1;
+
+    out[0] = 0x00;
+    out[1] = 0x00;
+    out[2] = 0x00;
+    out[3] = SOCKS5_ATYP_IPV4;
+    memcpy(out + 4, &src->sin_addr.s_addr, 4);
+    memcpy(out + 8, &src->sin_port, 2);
+    memmove(out + 10, payload, payload_len);
+    return (int)(10 + payload_len);
+}
+
+static void handle_udp_associate(sock_t client) {
+    sock_t udp = SOCK_INVALID;
+    struct sockaddr_in bind_addr;
+    socklen_t bind_len = sizeof(bind_addr);
+    struct sockaddr_in client_udp_addr;
+    int have_client_udp_addr = 0;
+    uint8_t buf[65536];
+
+    memset(&bind_addr, 0, sizeof(bind_addr));
+    memset(&client_udp_addr, 0, sizeof(client_udp_addr));
+
+    udp = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp == SOCK_INVALID) {
+        send_socks5_reply(client, 0x01);
+        sock_close(client);
+        return;
+    }
+
+    android_protect_socket((int)udp);
+
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    bind_addr.sin_port = htons(0);
+
+    if (bind(udp, (struct sockaddr*)&bind_addr, sizeof(bind_addr)) != 0 ||
+        getsockname(udp, (struct sockaddr*)&bind_addr, &bind_len) != 0) {
+        send_socks5_reply(client, 0x01);
+        sock_close(udp);
+        sock_close(client);
+        return;
+    }
+
+    send_socks5_reply_bound(client, 0x00, bind_addr.sin_addr.s_addr, bind_addr.sin_port);
+
+    for (;;) {
+        fd_set rd;
+        int maxfd = (int)(client > udp ? client : udp) + 1;
+        struct timeval tv = {120, 0};
+
+        FD_ZERO(&rd);
+        FD_SET(client, &rd);
+        FD_SET(udp, &rd);
+
+        if (select(maxfd, &rd, NULL, NULL, &tv) <= 0) {
+            break;
+        }
+
+        if (FD_ISSET(client, &rd)) {
+            int n = recv(client, (char*)buf, sizeof(buf), 0);
+            if (n <= 0) break;
+        }
+
+        if (FD_ISSET(udp, &rd)) {
+            struct sockaddr_in peer;
+            socklen_t peer_len = sizeof(peer);
+            int n = recvfrom(udp, (char*)buf, sizeof(buf), 0,
+                             (struct sockaddr*)&peer, &peer_len);
+            if (n <= 0) break;
+
+            if (peer.sin_addr.s_addr == htonl(INADDR_LOOPBACK)) {
+                socks5_target_t target;
+                struct sockaddr_in dst;
+                const uint8_t *payload = NULL;
+                size_t payload_len = 0;
+
+                if (!have_client_udp_addr) {
+                    client_udp_addr = peer;
+                    have_client_udp_addr = 1;
+                } else if (client_udp_addr.sin_port != peer.sin_port) {
+                    client_udp_addr = peer;
+                }
+
+                if (parse_socks5_udp_packet(buf, (size_t)n, &target, &payload, &payload_len) != 0) {
+                    continue;
+                }
+                if (resolve_udp_target(&target, &dst) != 0) {
+                    continue;
+                }
+                if (sendto(udp, (const char*)payload, payload_len, 0,
+                           (struct sockaddr*)&dst, sizeof(dst)) < 0) {
+                    continue;
+                }
+            } else if (have_client_udp_addr) {
+                int out_len = build_socks5_udp_response(buf, sizeof(buf), &peer, buf, (size_t)n);
+                if (out_len > 0) {
+                    sendto(udp, (const char*)buf, (size_t)out_len, 0,
+                           (struct sockaddr*)&client_udp_addr, sizeof(client_udp_addr));
+                }
+            }
+        }
+    }
+
+    sock_close(udp);
+    sock_close(client);
 }
 
 /* ---- Upstream SOCKS5 ---- */
@@ -250,6 +436,7 @@ void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *u
     socks5_target_t target;
     memset(&target, 0, sizeof(target));
     int is_http = 0;
+    int is_udp = 0;
 
     if (first == SOCKS5_VERSION) {
         /* SOCKS5 */
@@ -265,9 +452,15 @@ void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *u
         send(client, (char*)resp, 2, 0);
 
         uint8_t req[4];
-        if (recv(client, (char*)req, 4, MSG_WAITALL) != 4 ||
-            req[0] != SOCKS5_VERSION || req[1] != SOCKS5_CMD_CONNECT) {
+        uint8_t cmd;
+        if (recv(client, (char*)req, 4, MSG_WAITALL) != 4 || req[0] != SOCKS5_VERSION) {
             sock_close(client); return;
+        }
+        cmd = req[1];
+        if (cmd != SOCKS5_CMD_CONNECT && cmd != SOCKS5_CMD_UDP_ASSOCIATE) {
+            send_socks5_reply(client, 0x07);
+            sock_close(client);
+            return;
         }
         uint8_t atyp = req[3];
         if (atyp == SOCKS5_ATYP_IPV4) {
@@ -290,6 +483,7 @@ void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *u
         uint8_t port_buf[2];
         if (recv(client, (char*)port_buf, 2, MSG_WAITALL) != 2) { sock_close(client); return; }
         target.port = (uint16_t)((port_buf[0] << 8) | port_buf[1]);
+        is_udp = (cmd == SOCKS5_CMD_UDP_ASSOCIATE);
 
     } else if (first == 'C') {
         /* HTTP CONNECT */
@@ -321,7 +515,12 @@ void handle_client(sock_t client, const bypass_opts_t *opts, const upstream_t *u
         return;
     }
 
-    LOG("[%s] -> %s:%d", is_http ? "HTTP" : "SOCKS5", target.host, target.port);
+    LOG("[%s] -> %s:%d", is_http ? "HTTP" : (is_udp ? "SOCKS5-UDP" : "SOCKS5"), target.host, target.port);
+
+    if (is_udp) {
+        handle_udp_associate(client);
+        return;
+    }
 
     sock_t remote = SOCK_INVALID;
 
