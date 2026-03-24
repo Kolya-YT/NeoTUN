@@ -11,6 +11,7 @@ typedef struct {
     int tlsrec_split;   /* разбивать TLS record (1 = вкл) */
     int oob;            /* out-of-band байт */
     int http_split;     /* разбивать HTTP Host-заголовок */
+    int sni_chunks;     /* количество частей для SNI host при TLS split */
 } bypass_opts_t;
 
 /* Найти позицию SNI в TLS ClientHello, вернуть смещение или -1 */

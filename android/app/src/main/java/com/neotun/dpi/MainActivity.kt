@@ -44,14 +44,17 @@ class MainActivity : AppCompatActivity() {
         val disorder: Int,
         val tlsSplit: Int,
         val oob: Int,
-        val httpSplit: Int
+        val httpSplit: Int,
+        val sniChunks: Int
     )
 
     private val profiles = listOf(
-        BypassProfile("Сбалансированный", 0, 0, 1, 0, 1),
-        BypassProfile("Агрессивный", 0, 0, 1, 0, 1),
-        BypassProfile("Совместимый", 0, 0, 1, 0, 0)
+        BypassProfile("Сбалансированный", 0, 0, 1, 0, 1, 2),
+        BypassProfile("Агрессивный", 0, 0, 1, 0, 1, 4),
+        BypassProfile("Совместимый", 0, 0, 1, 0, 0, 1)
     )
+
+    private var currentSniChunks: Int = 2
 
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -145,6 +148,7 @@ class MainActivity : AppCompatActivity() {
             .putExtra(DpiVpnService.EXTRA_TLSREC_SPLIT, if (cbTlsSplit.isChecked) 1 else 0)
             .putExtra(DpiVpnService.EXTRA_OOB, 0)
             .putExtra(DpiVpnService.EXTRA_HTTP_SPLIT, if (cbHttpSplit.isChecked) 1 else 0)
+            .putExtra(DpiVpnService.EXTRA_SNI_CHUNKS, currentSniChunks)
         saveSettings()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i)
         else startService(i)
@@ -181,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         cbTlsSplit.isChecked = p.tlsSplit == 1
         cbDisorder.isChecked = p.disorder == 1
         cbOob.isChecked = p.oob == 1
+        currentSniChunks = p.sniChunks
         tvMode.text = buildModeLabel()
         saveSettings()
     }
@@ -188,6 +193,7 @@ class MainActivity : AppCompatActivity() {
     private fun buildModeLabel(): String {
         val parts = mutableListOf<String>()
         if (cbTlsSplit.isChecked) parts += "TLS split"
+        parts += "SNI x$currentSniChunks"
         if (cbHttpSplit.isChecked) parts += "HTTP host split"
         if (cbDisorder.isChecked) parts += "Disorder (off)"
         if (cbOob.isChecked) parts += "OOB (off)"
@@ -199,6 +205,7 @@ class MainActivity : AppCompatActivity() {
             .putInt("profile_idx", spProfile.selectedItemPosition.coerceAtLeast(0))
             .putBoolean("http_split", cbHttpSplit.isChecked)
             .putBoolean("tls_split", cbTlsSplit.isChecked)
+            .putInt("sni_chunks", currentSniChunks)
             .putBoolean("disorder", false)
             .putBoolean("oob", false)
             .apply()
@@ -207,6 +214,7 @@ class MainActivity : AppCompatActivity() {
     private fun restoreSettings() {
         cbHttpSplit.isChecked = prefs.getBoolean("http_split", true)
         cbTlsSplit.isChecked = prefs.getBoolean("tls_split", true)
+        currentSniChunks = prefs.getInt("sni_chunks", 2).coerceIn(1, 6)
         cbDisorder.isChecked = false
         cbOob.isChecked = false
         tvMode.text = buildModeLabel()

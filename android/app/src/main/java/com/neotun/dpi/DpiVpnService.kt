@@ -24,6 +24,7 @@ class DpiVpnService : VpnService() {
         const val EXTRA_TLSREC_SPLIT = "extra.tlsrec_split"
         const val EXTRA_OOB = "extra.oob"
         const val EXTRA_HTTP_SPLIT = "extra.http_split"
+        const val EXTRA_SNI_CHUNKS = "extra.sni_chunks"
         const val NOTIF_ID     = 1
         const val CHANNEL_ID   = "neotun_vpn"
 
@@ -37,7 +38,8 @@ class DpiVpnService : VpnService() {
         disorder: Int,
         tlsrecSplit: Int,
         oob: Int,
-        httpSplit: Int
+        httpSplit: Int,
+        sniChunks: Int
     ): Int
     private external fun nativeStopProxy()
 
@@ -97,13 +99,14 @@ class DpiVpnService : VpnService() {
             val splitPos = intent?.getIntExtra(EXTRA_SPLIT_POS, 0) ?: 0
             val tlsSplit = intent?.getIntExtra(EXTRA_TLSREC_SPLIT, 1) ?: 1
             val httpSplit = intent?.getIntExtra(EXTRA_HTTP_SPLIT, 1) ?: 1
+            val sniChunks = intent?.getIntExtra(EXTRA_SNI_CHUNKS, 2) ?: 2
             // NOTE: disorder/oob modes are unstable on Android transport path.
             val disorder = 0
             val oob = 0
 
             // defaults: split_pos=0 (SNI-based), disorder=0, tlsrec_split=1, oob=0, http_split=1
             // fake_ttl is disabled on Android (userspace socket, TTL trick doesn't work)
-            nativeStartProxy(splitPos, disorder, tlsSplit, oob, httpSplit)
+            nativeStartProxy(splitPos, disorder, tlsSplit, oob, httpSplit, sniChunks)
         } catch (e: Throwable) {
             fail("nativeStartProxy: $e")
             return

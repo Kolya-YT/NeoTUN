@@ -180,6 +180,30 @@ static int send_disorder(sock_t s, const uint8_t *buf, size_t split,
     return 0;
 }
 
+static int send_tls_sni_chunks(sock_t s, const uint8_t *buf, size_t len,
+                               size_t sni_off, size_t sni_len, int chunks) {
+    if (sni_off >= len || sni_len == 0 || chunks <= 1) return -1;
+    size_t sni_end = sni_off + sni_len;
+    if (sni_end > len) sni_end = len;
+    if (sni_end <= sni_off) return -1;
+
+    if (send_segment(s, buf, sni_off) < 0) return -1;
+
+    size_t host_len = sni_end - sni_off;
+    size_t step = host_len / (size_t)chunks;
+    if (step == 0) step = 1;
+    size_t pos = sni_off;
+    while (pos < sni_end) {
+        size_t n = step;
+        if (pos + n > sni_end) n = sni_end - pos;
+        if (send_segment(s, buf + pos, n) < 0) return -1;
+        pos += n;
+    }
+
+    if (sni_end < len && send_all_raw(s, buf + sni_end, len - sni_end) < 0) return -1;
+    return 0;
+}
+
 /* ── main bypass logic ────────────────────────────────────────────────────── */
 
 int bypass_send(sock_t s, const uint8_t *buf, size_t len, const bypass_opts_t *opts) {
@@ -216,6 +240,7 @@ int bypass_send(sock_t s, const uint8_t *buf, size_t len, const bypass_opts_t *o
     }
 
     int sni_off = find_sni_offset(buf, len);
+    uint16_t sni_len = 0;
     int split   = 0;
 
     if (sni_off > 0 && sni_off < (int)len) {
@@ -232,7 +257,7 @@ int bypass_send(sock_t s, const uint8_t *buf, size_t len, const bypass_opts_t *o
              *
              * We split at sni_off + sni_len/2 (middle of the hostname).
              */
-            uint16_t sni_len = (uint16_t)((buf[sni_off - 2] << 8) | buf[sni_off - 1]);
+            sni_len = (uint16_t)((buf[sni_off - 2] << 8) | buf[sni_off - 1]);
             int mid = sni_off + (sni_len / 2);
             if (mid > 0 && mid < (int)len)
                 split = mid;
@@ -254,6 +279,11 @@ int bypass_send(sock_t s, const uint8_t *buf, size_t len, const bypass_opts_t *o
 
     if (opts->disorder) {
         if (send_disorder(s, buf, (size_t)split, len, opts->oob) < 0) return -1;
+        return (int)len;
+    }
+
+    if (opts->sni_chunks > 2 && sni_off > 0 && sni_len > 0) {
+        if (send_tls_sni_chunks(s, buf, len, (size_t)sni_off, (size_t)sni_len, opts->sni_chunks) < 0) return -1;
         return (int)len;
     }
 
