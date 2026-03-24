@@ -19,6 +19,11 @@ class DpiVpnService : VpnService() {
         const val TAG          = "NeoTUN"
         const val ACTION_START = "com.neotun.dpi.START"
         const val ACTION_STOP  = "com.neotun.dpi.STOP"
+        const val EXTRA_SPLIT_POS = "extra.split_pos"
+        const val EXTRA_DISORDER = "extra.disorder"
+        const val EXTRA_TLSREC_SPLIT = "extra.tlsrec_split"
+        const val EXTRA_OOB = "extra.oob"
+        const val EXTRA_HTTP_SPLIT = "extra.http_split"
         const val NOTIF_ID     = 1
         const val CHANNEL_ID   = "neotun_vpn"
 
@@ -27,7 +32,13 @@ class DpiVpnService : VpnService() {
     }
 
     // neotun_bypass JNI — loaded lazily
-    private external fun nativeStartProxy(splitPos: Int, disorder: Int, tlsrecSplit: Int, oob: Int): Int
+    private external fun nativeStartProxy(
+        splitPos: Int,
+        disorder: Int,
+        tlsrecSplit: Int,
+        oob: Int,
+        httpSplit: Int
+    ): Int
     private external fun nativeStopProxy()
 
     // hev-socks5-tunnel JNI — loaded lazily
@@ -56,13 +67,13 @@ class DpiVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand: ${intent?.action}")
         when (intent?.action) {
-            ACTION_START -> doStart()
+            ACTION_START -> doStart(intent)
             ACTION_STOP  -> doStop()
         }
         return START_NOT_STICKY
     }
 
-    private fun doStart() {
+    private fun doStart(intent: Intent?) {
         if (isRunning) return
 
         createNotificationChannel()
@@ -83,9 +94,15 @@ class DpiVpnService : VpnService() {
             return
         }
         val proxyResult = try {
-            // split_pos=0 (use SNI-based split), disorder=0, tlsrec_split=1, oob=0
+            val splitPos = intent?.getIntExtra(EXTRA_SPLIT_POS, 0) ?: 0
+            val disorder = intent?.getIntExtra(EXTRA_DISORDER, 0) ?: 0
+            val tlsSplit = intent?.getIntExtra(EXTRA_TLSREC_SPLIT, 1) ?: 1
+            val oob = intent?.getIntExtra(EXTRA_OOB, 0) ?: 0
+            val httpSplit = intent?.getIntExtra(EXTRA_HTTP_SPLIT, 1) ?: 1
+
+            // defaults: split_pos=0 (SNI-based), disorder=0, tlsrec_split=1, oob=0, http_split=1
             // fake_ttl is disabled on Android (userspace socket, TTL trick doesn't work)
-            nativeStartProxy(0, 0, 1, 0)
+            nativeStartProxy(splitPos, disorder, tlsSplit, oob, httpSplit)
         } catch (e: Throwable) {
             fail("nativeStartProxy: $e")
             return

@@ -10,6 +10,7 @@ typedef struct {
     int fake_ttl;       /* TTL для fake-пакета (-1 = выкл) */
     int tlsrec_split;   /* разбивать TLS record (1 = вкл) */
     int oob;            /* out-of-band байт */
+    int http_split;     /* разбивать HTTP Host-заголовок */
 } bypass_opts_t;
 
 /* Найти позицию SNI в TLS ClientHello, вернуть смещение или -1 */

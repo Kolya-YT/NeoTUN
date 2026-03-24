@@ -92,6 +92,36 @@ static void send_oob(sock_t s) {
     delay_ms(1);
 }
 
+static int starts_with(const uint8_t *buf, size_t len, const char *lit) {
+    size_t n = strlen(lit);
+    return len >= n && memcmp(buf, lit, n) == 0;
+}
+
+/*
+ * Lightweight HTTP request parser:
+ *  - checks common methods
+ *  - finds "Host: " and returns offset of hostname value
+ */
+static int find_http_host_offset(const uint8_t *buf, size_t len) {
+    if (!(starts_with(buf, len, "GET ") ||
+          starts_with(buf, len, "POST ") ||
+          starts_with(buf, len, "HEAD ") ||
+          starts_with(buf, len, "PUT ") ||
+          starts_with(buf, len, "PATCH ") ||
+          starts_with(buf, len, "DELETE ") ||
+          starts_with(buf, len, "OPTIONS "))) {
+        return -1;
+    }
+
+    const char pat[] = "\r\nHost: ";
+    for (size_t i = 0; i + sizeof(pat) - 1 < len; ++i) {
+        if (memcmp(buf + i, pat, sizeof(pat) - 1) == 0) {
+            return (int)(i + sizeof(pat) - 1);
+        }
+    }
+    return -1;
+}
+
 /*
  * Build a fake TLS record with junk payload of the same length.
  * Uses TTL=1 so it dies before reaching the server but fools DPI.
@@ -153,6 +183,33 @@ static int send_disorder(sock_t s, const uint8_t *buf, size_t split,
 /* ── main bypass logic ────────────────────────────────────────────────────── */
 
 int bypass_send(sock_t s, const uint8_t *buf, size_t len, const bypass_opts_t *opts) {
+    /*
+     * HTTP bypass (ByeByeDPI-style idea):
+     * split request inside Host header value to break basic DPI parsing.
+     */
+    if (opts->http_split) {
+        int host_off = find_http_host_offset(buf, len);
+        if (host_off > 0 && host_off < (int)len) {
+            size_t host_len = 0;
+            while ((size_t)host_off + host_len < len) {
+                uint8_t c = buf[host_off + host_len];
+                if (c == '\r' || c == '\n' || c == ' ' || c == '\t') break;
+                host_len++;
+            }
+            int split = host_off + (int)(host_len / 2);
+            if (host_len > 2 && split > 0 && split < (int)len) {
+                if (opts->disorder) {
+                    if (send_disorder(s, buf, (size_t)split, len, opts->oob) < 0) return -1;
+                    return (int)len;
+                }
+                if (send_segment(s, buf, (size_t)split) < 0) return -1;
+                if (opts->oob) send_oob(s);
+                if (send_all_raw(s, buf + split, len - (size_t)split) < 0) return -1;
+                return (int)len;
+            }
+        }
+    }
+
     /* Not TLS ClientHello — pass through */
     if (len < 5 || buf[0] != 0x16) {
         return (int)send_all(s, buf, len);

@@ -93,7 +93,8 @@ JNIEXPORT jint JNICALL
 Java_com_neotun_dpi_DpiVpnService_nativeStartProxy(
         JNIEnv *env, jobject thiz,
         jint split_pos, jint disorder,
-        jint tlsrec_split, jint oob)
+        jint tlsrec_split, jint oob,
+        jint http_split)
 {
     if (g_running) return 0;
 
@@ -109,6 +110,7 @@ Java_com_neotun_dpi_DpiVpnService_nativeStartProxy(
     g_opts.fake_ttl     = 0;
     g_opts.tlsrec_split = tlsrec_split;
     g_opts.oob          = oob;
+    g_opts.http_split   = http_split;
 
     g_server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (g_server_fd < 0) { LOGE("socket failed"); return -1; }
