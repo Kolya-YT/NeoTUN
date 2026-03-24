@@ -37,6 +37,10 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            // CI currently builds unsigned release APKs by default, which
+            // cannot be installed directly on devices. Reuse debug signing
+            // for now so release artifacts are installable.
+            signingConfig signingConfigs.debug
         }
     }
 
