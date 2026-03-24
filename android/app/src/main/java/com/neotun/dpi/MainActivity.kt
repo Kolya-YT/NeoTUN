@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
     private val profiles = listOf(
         BypassProfile("Сбалансированный", 0, 0, 1, 0, 1),
-        BypassProfile("Агрессивный", 0, 1, 1, 1, 1),
+        BypassProfile("Агрессивный", 0, 0, 1, 0, 1),
         BypassProfile("Совместимый", 0, 0, 1, 0, 0)
     )
 
@@ -78,6 +78,8 @@ class MainActivity : AppCompatActivity() {
         cbTlsSplit = findViewById(R.id.cbTlsSplit)
         cbDisorder = findViewById(R.id.cbDisorder)
         cbOob = findViewById(R.id.cbOob)
+        cbDisorder.isEnabled = false
+        cbOob.isEnabled = false
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, profiles.map { it.title })
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -139,9 +141,9 @@ class MainActivity : AppCompatActivity() {
         val i = Intent(this, DpiVpnService::class.java)
             .setAction(DpiVpnService.ACTION_START)
             .putExtra(DpiVpnService.EXTRA_SPLIT_POS, 0)
-            .putExtra(DpiVpnService.EXTRA_DISORDER, if (cbDisorder.isChecked) 1 else 0)
+            .putExtra(DpiVpnService.EXTRA_DISORDER, 0)
             .putExtra(DpiVpnService.EXTRA_TLSREC_SPLIT, if (cbTlsSplit.isChecked) 1 else 0)
-            .putExtra(DpiVpnService.EXTRA_OOB, if (cbOob.isChecked) 1 else 0)
+            .putExtra(DpiVpnService.EXTRA_OOB, 0)
             .putExtra(DpiVpnService.EXTRA_HTTP_SPLIT, if (cbHttpSplit.isChecked) 1 else 0)
         saveSettings()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i)
@@ -187,8 +189,8 @@ class MainActivity : AppCompatActivity() {
         val parts = mutableListOf<String>()
         if (cbTlsSplit.isChecked) parts += "TLS split"
         if (cbHttpSplit.isChecked) parts += "HTTP host split"
-        if (cbDisorder.isChecked) parts += "Disorder"
-        if (cbOob.isChecked) parts += "OOB"
+        if (cbDisorder.isChecked) parts += "Disorder (off)"
+        if (cbOob.isChecked) parts += "OOB (off)"
         return if (parts.isEmpty()) "Базовый" else parts.joinToString(" + ")
     }
 
@@ -197,16 +199,16 @@ class MainActivity : AppCompatActivity() {
             .putInt("profile_idx", spProfile.selectedItemPosition.coerceAtLeast(0))
             .putBoolean("http_split", cbHttpSplit.isChecked)
             .putBoolean("tls_split", cbTlsSplit.isChecked)
-            .putBoolean("disorder", cbDisorder.isChecked)
-            .putBoolean("oob", cbOob.isChecked)
+            .putBoolean("disorder", false)
+            .putBoolean("oob", false)
             .apply()
     }
 
     private fun restoreSettings() {
         cbHttpSplit.isChecked = prefs.getBoolean("http_split", true)
         cbTlsSplit.isChecked = prefs.getBoolean("tls_split", true)
-        cbDisorder.isChecked = prefs.getBoolean("disorder", false)
-        cbOob.isChecked = prefs.getBoolean("oob", false)
+        cbDisorder.isChecked = false
+        cbOob.isChecked = false
         tvMode.text = buildModeLabel()
     }
 

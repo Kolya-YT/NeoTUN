@@ -148,7 +148,7 @@
                 android:id="@+id/cbDisorder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Disorder (перестановка сегментов)"
+                android:text="Disorder (временно отключено)"
                 android:textColor="#BFC7FF"
                 android:buttonTint="#4F7FFF"/>
 
@@ -156,7 +156,7 @@
                 android:id="@+id/cbOob"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="OOB marker"
+                android:text="OOB marker (временно отключено)"
                 android:textColor="#BFC7FF"
                 android:buttonTint="#4F7FFF"/>
         </LinearLayout>

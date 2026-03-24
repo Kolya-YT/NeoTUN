@@ -95,10 +95,11 @@ class DpiVpnService : VpnService() {
         }
         val proxyResult = try {
             val splitPos = intent?.getIntExtra(EXTRA_SPLIT_POS, 0) ?: 0
-            val disorder = intent?.getIntExtra(EXTRA_DISORDER, 0) ?: 0
             val tlsSplit = intent?.getIntExtra(EXTRA_TLSREC_SPLIT, 1) ?: 1
-            val oob = intent?.getIntExtra(EXTRA_OOB, 0) ?: 0
             val httpSplit = intent?.getIntExtra(EXTRA_HTTP_SPLIT, 1) ?: 1
+            // NOTE: disorder/oob modes are unstable on Android transport path.
+            val disorder = 0
+            val oob = 0
 
             // defaults: split_pos=0 (SNI-based), disorder=0, tlsrec_split=1, oob=0, http_split=1
             // fake_ttl is disabled on Android (userspace socket, TTL trick doesn't work)
